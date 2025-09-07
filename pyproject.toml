@@ -1,0 +1,81 @@
+[project]
+name = "led-testing-toolkit"
+version = "0.0.1"
+description = ""
+readme = "README.md"
+author = { name = "tarpetos", email = "hevlichtaras@gmail.com" }
+requires-python = ">=3.13, <3.14"
+dependencies = [
+    "numpy==2.3.2",
+    "scipy==1.16.1",
+    "pymongo==4.14.1",
+    "matplotlib==3.10.6",
+    "loguru==0.7.3",
+    "overrides==7.7.0",
+    "pip==25.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest==8.4.2",
+    "pytest-cov==6.3.0",
+    "ruff==0.12.12",
+]
+
+[tool.ruff]
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".git-rewrite",
+    ".hg",
+    ".ipynb_checkpoints",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pyenv",
+    ".pytest_cache",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    ".vscode",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "site-packages",
+    "venv",
+    "tests",
+]
+builtins = ["_"]
+
+[tool.ruff.lint]
+ignore = [
+    "ANN002", "ANN003", "ANN204",
+    "BLE001",
+    "D100", "D101", "D102", "D103", "D104", "D105", "D107", "D203", "D205", "D212", "D401",
+    "DTZ005",
+    "EM101", "EM102",
+    "G004",
+    "FBT001", "FBT002", "FBT003",
+    "FIX001", "FIX002",
+    "N802",
+    "PLR2004",
+    "TD001", "TD002", "TD003", "TD004", "TD005",
+    "TRY002", "TRY003", "TRY400",
+]
+select = ["ALL"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.ruff.lint.pycodestyle]
+max-line-length = 120
+
+[tool.ruff.format]
+quote-style = "double"

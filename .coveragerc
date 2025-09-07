@@ -1,0 +1,9 @@
+[run]
+source = led_testing_toolkit
+omit =
+    */__init__.py
+
+[report]
+exclude_also =
+    if TYPE_CHECKING:
+    if __name__ == "__main__":
