@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  quality-checks:
     runs-on: ubuntu-latest
     strategy:
       matrix:
