@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from pymongo import AsyncMongoClient
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Mapping
+    from collections.abc import Mapping
 
     from loguru._logger import Logger
     from pymongo.asynchronous.collection import AsyncCollection
@@ -120,7 +120,7 @@ class AsyncMongoDbConnector:
         query: dict[str, Any],
         projection: dict[str, int] | None = None,
         find_many: bool = False,
-    ) -> AsyncIterator[Mapping[str, Any] | Any] | Mapping[str, Any] | None:
+    ) -> list[Mapping[str, Any]] | Mapping[str, Any] | None:
         """
         Read data from the collection.
 
@@ -133,7 +133,7 @@ class AsyncMongoDbConnector:
             raise ValueError("No collection selected! Call `use_collection` first.")
 
         if find_many:
-            return self.collection.find(query, projection)
+            return [item async for item in self.collection.find(query, projection)]
 
         result = await self.collection.find_one(query, projection)
         if not query and result is None:
