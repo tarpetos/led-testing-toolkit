@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime
+from collections.abc import Sequence  # noqa: TC003
 
 from pydantic import field_validator
 from pydantic.dataclasses import dataclass
-
-from collections.abc import Sequence
 
 
 @dataclass
@@ -16,7 +14,7 @@ class Color:
 
     @field_validator("R", "G", "B")
     @classmethod
-    def validate_rgb(cls, v):
+    def validate_rgb(cls, v: int) -> int:
         if not 0 <= v <= 255:
             raise TypeError("RGB values must be between 0 and 255:")
         return v
