@@ -5,9 +5,15 @@ on:
     branches:
       - '**'
 
+permissions:
+  contents: read
+
 jobs:
-  dependencies:
+  test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        check: [linter, unit-tests]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -19,98 +25,33 @@ jobs:
 
       - name: Install uv
         run: curl -LsSf https://astral.sh/uv/install.sh | sh
+        shell: bash
 
-      - name: Cache uv
+      - name: Add uv to PATH
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Cache uv dependencies
         uses: actions/cache@v4
         with:
-          path: ~/.cache/uv
+          path: |
+            ~/.cache/uv
+            .venv
           key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml', 'uv.lock') }}
           restore-keys: |
             ${{ runner.os }}-uv-
 
-      - name: Create and activate virtual environment
+      - name: Create virtual environment and install dependencies
         run: |
-          python -m venv .venv
-          source .venv/bin/activate
-          echo "VIRTUAL_ENV=.venv" >> $GITHUB_ENV
-          echo ".venv/bin" >> $GITHUB_PATH
-
-      - name: Install dependencies with uv
-        run: |
-          source .venv/bin/activate
+          uv venv .venv
           uv sync
-
-      - name: Store virtual environment as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: venv
-          path: .venv/
-          retention-days: 1
-
-  linter:
-    needs: dependencies
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python3.13
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
-
-      - name: Cache uv
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml', 'uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-
-
-      - name: Download virtual environment
-        uses: actions/download-artifact@v4
-        with:
-          name: venv
-          path: .venv/
+        shell: bash
 
       - name: Run linter
-        run: |
-          source .venv/bin/activate
-          ruff check
-
-  unit-tests:
-    needs: dependencies
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.13
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.13'
-
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
-
-      - name: Cache uv
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/uv
-          key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml', 'uv.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-uv-
-
-      - name: Download virtual environment
-        uses: actions/download-artifact@v4
-        with:
-          name: venv
-          path: .venv/
+        if: matrix.check == 'linter'
+        run: .venv/bin/ruff check
+        shell: bash
 
       - name: Run unit tests
-        run: |
-          source .venv/bin/activate
-          pytest tests/
+        if: matrix.check == 'unit-tests'
+        run: .venv/bin/pytest tests/
+        shell: bash
