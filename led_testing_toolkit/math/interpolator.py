@@ -11,11 +11,15 @@ if TYPE_CHECKING:
 
 
 class Interpolator:
-    LOWER_BOUND: int = 0
-    UPPER_BOUND: int = 100
+    DEFAULT_LOWER_BOUND: Final[int] = 0
+    DEFAULT_UPPER_BOUND: Final[int] = 100
 
     MIN_INTERPOLATION_POINTS: Final[int] = 2
     SHAPE: Final[int] = 2
+
+    def __init__(self, *, lower_bound: int = DEFAULT_LOWER_BOUND, upper_bound: int = DEFAULT_UPPER_BOUND) -> None:
+        self.lower_bound = lower_bound
+        self.upper_bound = upper_bound
 
     async def interpolate_linear(
         self,
@@ -46,7 +50,7 @@ class Interpolator:
         max_x = x_max if x_max is not None else x.max()
         x_new = np.linspace(x.min(), max_x, num_points)
         y_new = np.interp(x_new, x, y)
-        y_new = np.clip(y_new, a_min=self.LOWER_BOUND, a_max=self.UPPER_BOUND)
+        y_new = np.clip(y_new, a_min=self.lower_bound, a_max=self.upper_bound)
 
         x_new_relative = x_new - x_new.min()
         return x_new_relative, y_new

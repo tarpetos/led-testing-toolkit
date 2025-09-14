@@ -16,12 +16,7 @@ if TYPE_CHECKING:
 
 
 class Comparator:
-    def __init__(
-        self,
-        etalon: Record,
-        measured: Record,
-        interpolator: Interpolator,
-    ) -> None:
+    def __init__(self, etalon: Record, measured: Record, interpolator: Interpolator) -> None:
         self._etalon = etalon
         self._measured = measured
         self._interpolator = interpolator
@@ -83,7 +78,7 @@ class Comparator:
         if len(valid_diffs) == 0:
             return 0.0
         mae = np.mean(valid_diffs)
-        accuracy = 100 * (1 - mae / self._interpolator.UPPER_BOUND)
+        accuracy = 100 * (1 - mae / self._interpolator.upper_bound)
         return max(0.0, accuracy)
 
     def _calculate_point_count_accuracy(self) -> float:
@@ -129,7 +124,7 @@ class Comparator:
         plt.xlabel(kwargs.get("xlabel", "X"))
         plt.ylabel(kwargs.get("ylabel", "Y"))
         plt.legend()
-        plt.ylim(self._interpolator.LOWER_BOUND, self._interpolator.UPPER_BOUND + 5)
+        plt.ylim(self._interpolator.lower_bound - 5, self._interpolator.upper_bound + 5)
         plt.grid(True)
 
         save_path = kwargs.get("save_path")

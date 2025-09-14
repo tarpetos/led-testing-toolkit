@@ -17,11 +17,7 @@ if TYPE_CHECKING:
 
 
 class Aggregator:
-    def __init__(
-        self,
-        dataset: Dataset,
-        interpolator: Interpolator,
-    ) -> None:
+    def __init__(self, dataset: Dataset, interpolator: Interpolator) -> None:
         self._records: list[Record] = dataset.records
         self._interpolator: Interpolator = interpolator
         self._interpolated: list[tuple[ndarray, ndarray]] = []
@@ -88,7 +84,7 @@ class Aggregator:
         plt.title(kwargs.get("title", "Interpolated measurements with etalon (black on top)"))
         plt.xlabel(kwargs.get("xlabel", "X"))
         plt.ylabel(kwargs.get("ylabel", "Y"))
-        plt.ylim(self._interpolator.LOWER_BOUND, self._interpolator.UPPER_BOUND + 5)
+        plt.ylim(self._interpolator.lower_bound - 5, self._interpolator.upper_bound + 5)
         plt.grid(True)
         plt.tight_layout()
 
