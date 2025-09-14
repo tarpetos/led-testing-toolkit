@@ -181,6 +181,15 @@ class LedParser:
         return led_sequences
 
     async def parse_log_file(self, log_file_path: Path, *, ignore_before_date: datetime | None = None) -> None:
+        """
+        Parse a single log file to extract LED patterns and sequences.
+
+        Processes raw log data to identify LED color events, calculates relative and absolute
+        timing for each LED sequence, and stores the parsed patterns.
+
+        :param log_file_path: Path to the log file to be parsed
+        :param ignore_before_date: optional datetime filter - entries before this date will be ignored
+        """
         log_file_path = Path(log_file_path)
         parsed_patterns = []
         raw_patterns = await self._retrieve_patterns(log_file_path)
@@ -217,6 +226,11 @@ class LedParser:
         self._parsed_patterns[log_file_path] = parsed_patterns
 
     async def parse_patterns(self, *, ignore_before_date: datetime | None = None) -> None:
+        """
+        Parse all configured log files concurrently to extract LED patterns.
+
+        :param ignore_before_date: datetime filter - log entries before this date will be ignored across all files
+        """
         async with TaskGroup() as tg:
             for log_file_path in self._log_file_paths:
                 tg.create_task(self.parse_log_file(log_file_path, ignore_before_date=ignore_before_date))
