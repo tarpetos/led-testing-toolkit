@@ -2,7 +2,7 @@ import pytest
 import os
 from unittest.mock import patch
 
-from led_testing_toolkit.async_mongo_db_connector import get_async_mongo_client
+from led_testing_toolkit.mongo_db_connector import get_async_mongo_client
 
 
 @pytest.mark.anyio
@@ -59,8 +59,8 @@ from led_testing_toolkit.async_mongo_db_connector import get_async_mongo_client
 )
 async def test_get_async_mongo_client(env_vars, call_args, expected_result, raises_exception):
     with (
-        patch("led_testing_toolkit.async_mongo_db_connector.load_dotenv"),
-        patch("led_testing_toolkit.async_mongo_db_connector.AsyncMongoClient") as mock_client,
+        patch("led_testing_toolkit.mongo_db_connector.load_dotenv"),
+        patch("led_testing_toolkit.mongo_db_connector.AsyncMongoClient") as mock_client,
         patch.dict(os.environ, env_vars, clear=True),
     ):
         if raises_exception:
