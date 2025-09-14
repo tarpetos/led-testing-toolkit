@@ -24,9 +24,11 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "aiofiles==24.1.0",
     "pytest==8.4.2",
     "pytest-cov==6.3.0",
     "ruff==0.12.12",
+    "pre-commit==4.1.0",
 ]
 
 [tool.ruff]
