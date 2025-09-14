@@ -10,10 +10,10 @@ import numpy as np
 from matplotlib.colors import rgb2hex
 from numpy import ndarray
 
-from led_testing_toolkit.math.models import Dataset, Point, Record
+from .models import Dataset, Point, Record
 
 if TYPE_CHECKING:
-    from led_testing_toolkit.math.interpolator import Interpolator
+    from .interpolator import Interpolator
 
 
 class Aggregator:

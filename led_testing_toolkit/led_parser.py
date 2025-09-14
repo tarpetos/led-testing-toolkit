@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Final
 import aiofiles
 import loguru
 
-from led_testing_toolkit.led_models import LED, Color, LEDPattern, LEDSequence
+from .led_models import LED, Color, LEDPattern, LEDSequence
 
 if TYPE_CHECKING:
     from collections.abc import Sequence

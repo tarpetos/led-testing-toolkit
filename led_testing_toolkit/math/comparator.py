@@ -7,12 +7,12 @@ import matplotlib.pyplot as plt
 import numpy as np
 from numpy import ndarray
 
-from led_testing_toolkit.math.models import Point, Record
+from .models import Point, Record
 
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from led_testing_toolkit.math.interpolator import Interpolator
+    from .interpolator import Interpolator
 
 
 class Comparator:
