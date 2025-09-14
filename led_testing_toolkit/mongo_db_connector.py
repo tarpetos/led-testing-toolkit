@@ -57,7 +57,7 @@ async def get_async_mongo_client(
     return AsyncMongoClient(**vars(), directConnection=True)
 
 
-class AsyncMongoDbConnector:
+class MongoDbConnector:
     def __init__(
         self,
         db_name: str,

@@ -168,7 +168,7 @@ cython_debug/
 .python-version
 
 # modules created for development purposes only
-*/dev*.py
+*dev*.py
 
 *.png
 *.jpg
