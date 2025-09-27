@@ -21,7 +21,7 @@ class Interpolator:
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
 
-    async def interpolate_linear(
+    async def interpolate(
         self,
         coordinates: list[Point],
         *,
@@ -31,26 +31,42 @@ class Interpolator:
         if num_points < self.MIN_INTERPOLATION_POINTS:
             raise ValueError(f"Number of interpolation points must be at least {self.MIN_INTERPOLATION_POINTS}!")
 
-        return await asyncio.to_thread(self._interpolate_linear_sync, coordinates, num_points, x_max)
+        return await asyncio.to_thread(self._interpolate_sync, coordinates, num_points, x_max)
 
-    def _interpolate_linear_sync(
+    def _interpolate_sync(
         self,
         coordinates: list[Point],
         num_points: int,
         x_max: float | None = None,
     ) -> tuple[ndarray, ndarray]:
+        if not coordinates:
+            return np.array([]), np.array([])
+
         coords = np.array([[point.x, point.y] for point in coordinates], dtype=float)
 
         if coords.ndim != self.SHAPE or coords.shape[1] != self.SHAPE:
             raise ValueError("Input must be a list or array of [x, y] coordinates with shape (n, 2)!")
 
-        x = coords[:, 0]
-        y = coords[:, 1]
+        x, y = coords[:, 0], coords[:, 1].copy()
 
-        max_x = x_max if x_max is not None else x.max()
-        x_new = np.linspace(x.min(), max_x, num_points)
+        if len(y) > 3:
+            y_orig = y.copy()
+            signal_range = np.nanmax(y_orig) - np.nanmin(y_orig)
+
+            if signal_range > 1e-6:
+                dynamic_threshold = signal_range * 0.35
+                for i in range(1, len(y) - 1):
+                    prev_val, curr_val, next_val = y_orig[i - 1], y_orig[i], y_orig[i + 1]
+                    local_median = np.median([prev_val, next_val])
+
+                    if abs(curr_val - local_median) > dynamic_threshold:
+                        y[i] = local_median
+
+        interp_x_max = x_max if x_max is not None else x[-1]
+        x_new = np.linspace(x[0], interp_x_max, num_points)
         y_new = np.interp(x_new, x, y)
-        y_new = np.clip(y_new, a_min=self.lower_bound, a_max=self.upper_bound)
 
-        x_new_relative = x_new - x_new.min()
+        y_new = np.clip(y_new, a_min=self.lower_bound, a_max=self.upper_bound)
+        x_new_relative = x_new - x_new[0] if len(x_new) > 0 else np.array([])
+
         return x_new_relative, y_new

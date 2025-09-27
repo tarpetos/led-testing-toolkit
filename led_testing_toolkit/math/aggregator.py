@@ -39,7 +39,7 @@ class Aggregator:
             if not record.coordinates:
                 continue
 
-            task = self._interpolator.interpolate_linear(
+            task = self._interpolator.interpolate(
                 record.coordinates,
                 num_points=len(record.coordinates),
             )
@@ -55,18 +55,70 @@ class Aggregator:
 
         await asyncio.to_thread(self._aggregate_sync)
 
-    def _aggregate_sync(self) -> None:
-        max_time = max(x_new_relative.max() for x_new_relative, _ in self._interpolated)
-        num_points = max(len(x_new_relative) for x_new_relative, _ in self._interpolated)
-        all_times = np.linspace(0, max_time, num_points)
+    def _aggregate_sync(self) -> None:  # noqa: C901
+        if not self._interpolated:
+            return
 
-        y_values = np.full((len(self._interpolated), num_points), np.nan)
+        longest_x = max(self._interpolated, key=lambda item: len(item[0]))[0]
+        num_points = len(longest_x)
+        y_matrix = np.full((len(self._interpolated), num_points), np.nan)
 
-        for i, (x_new_relative, y_new) in enumerate(self._interpolated):
-            y_values[i] = np.interp(all_times, x_new_relative, y_new, left=np.nan, right=np.nan)
+        for i, (x, y) in enumerate(self._interpolated):
+            y_matrix[i, :] = np.interp(longest_x, x, y, left=np.nan, right=np.nan)
 
-        aggregated_y = np.nanmean(y_values, axis=0)
-        self._etalon = {"x": all_times, "y": aggregated_y}
+        cliff_start_indices = []
+        cliffs = []
+
+        for i in range(y_matrix.shape[0]):
+            signal = y_matrix[i, :]
+            valid_signal = signal[~np.isnan(signal)]
+            if len(valid_signal) < 10:
+                continue
+
+            plateau_start, plateau_end = int(0.25 * num_points), int(0.75 * num_points)
+            plateau_level = np.nanmedian(signal[plateau_start:plateau_end])
+
+            if np.isnan(plateau_level):
+                continue
+
+            threshold = 0.9 * plateau_level
+            cliff_idx = -1
+            for j in range(num_points - 2, plateau_end, -1):
+                if not np.isnan(signal[j]) and signal[j] > threshold:
+                    cliff_idx = j + 1
+                    break
+
+            if cliff_idx != -1 and cliff_idx < num_points:
+                cliff_start_indices.append(cliff_idx)
+                cliffs.append(signal[cliff_idx:])
+
+        if not cliffs:
+            aggregated_y = np.nanmean(y_matrix, axis=0)
+            self._etalon = {"x": longest_x, "y": aggregated_y}
+            return
+
+        max_cliff_len = max(len(c) for c in cliffs)
+        padded_cliffs = np.full((len(cliffs), max_cliff_len), np.nan)
+        for i, c in enumerate(cliffs):
+            padded_cliffs[i, : len(c)] = c
+
+        averaged_cliff_list = []
+        for col_idx in range(padded_cliffs.shape[1]):
+            column = padded_cliffs[:, col_idx]
+            if np.all(np.isnan(column)):
+                break
+            averaged_cliff_list.append(np.nanmean(column))
+        averaged_cliff = np.array(averaged_cliff_list)
+
+        avg_cliff_start_index = int(np.mean(cliff_start_indices))
+        plateau_part = np.nanmean(y_matrix[:, :avg_cliff_start_index], axis=0)
+
+        final_y_combined = np.concatenate((plateau_part, averaged_cliff))
+
+        final_y = final_y_combined[:num_points]
+        final_x = longest_x[: len(final_y)]
+
+        self._etalon = {"x": final_x, "y": final_y}
 
     async def start(self) -> None:
         await self._interpolate()
@@ -79,7 +131,13 @@ class Aggregator:
         for x, y in self._interpolated:
             plt.plot(x, y, color=next(colors), alpha=0.6)
 
-        if self._etalon:
+        if (
+            self._etalon
+            and "x" in self._etalon
+            and "y" in self._etalon
+            and len(self._etalon["x"]) > 0
+            and len(self._etalon["y"]) > 0
+        ):
             plt.plot(self._etalon["x"], self._etalon["y"], color="black")
 
         plt.title(kwargs.get("title", "Interpolated measurements with etalon (black on top)"))
