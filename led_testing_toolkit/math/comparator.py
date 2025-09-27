@@ -1,18 +1,17 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy import ndarray
 
-from .models import Point, Record
+from led_testing_toolkit.math.models import Point, Record
 
 if TYPE_CHECKING:
-    from pathlib import Path
-
-    from .interpolator import Interpolator
+    from led_testing_toolkit.math.interpolator import Interpolator
 
 
 class Comparator:
@@ -127,6 +126,8 @@ class Comparator:
         plt.ylim(self._interpolator.lower_bound - 5, self._interpolator.upper_bound + 5)
         plt.grid(True)
 
-        save_path = kwargs.get("save_path")
+        save_path = Path(kwargs.get("save_path"))
+        save_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(save_path) if save_path else plt.show()
+        plt.close()
         return save_path

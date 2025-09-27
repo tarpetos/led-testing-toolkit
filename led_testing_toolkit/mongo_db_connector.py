@@ -118,7 +118,7 @@ class MongoDbConnector:
     async def read(
         self,
         query: dict[str, Any],
-        projection: dict[str, int] | None = None,
+        projection: dict[str, int | str] | None = None,
         find_many: bool = False,
     ) -> list[Mapping[str, Any]] | Mapping[str, Any] | None:
         """
@@ -215,6 +215,31 @@ class MongoDbConnector:
             return await self.insert(query) if data is None else await self.insert(data)
         self.logger.warning("Row with such data already exists!")
         return None
+
+    async def upsert(
+        self,
+        query: dict[str, Any] | list[dict[str, Any]],
+        update_data: dict[str, Any] | None = None,
+        many: bool = False,
+    ) -> UpdateResult | list[UpdateResult] | None:
+        """
+        Insert or update one or multiple documents in the collection.
+
+        :param query: query filter dictionary or list of query filter dictionaries
+        :param update_data: data to set on update, defaults to query if None
+        :param many: whether to process multiple documents, defaults to False
+        :return: update operation result(s) or None
+        """
+        if self.collection is None:
+            raise ValueError("No collection selected! Call `use_collection` first.")
+
+        if many and isinstance(query, list):
+            filter_query = {"$or": query}
+            data = update_data if update_data is not None else query[0]
+            return await self.collection.update_many(filter_query, {"$set": data}, upsert=True)
+        single_query = query if not isinstance(query, list) else query[0]
+        data = update_data if update_data is not None else single_query
+        return await self.collection.update_one(single_query, {"$set": data}, upsert=True)
 
     async def drop(self, collection_name: str) -> dict[str, Any] | None:
         """

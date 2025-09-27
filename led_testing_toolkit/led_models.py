@@ -35,6 +35,4 @@ class LEDSequence:
 
 @dataclass
 class LEDPattern:
-    device_prefix: str
-    name: str
     sequences: Sequence[LEDSequence]

@@ -5,38 +5,42 @@ import tempfile
 from asyncio import TaskGroup
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING
 
 import aiofiles
 import loguru
 
-from .led_models import LED, Color, LEDPattern, LEDSequence
+from led_testing_toolkit.math.models import Point, Record
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
-    from loguru._logger import Logger
+    from led_types import (
+        LedRgbData,
+        LedSequence,
+        ParsedPatterns,
+        RawPattern,
+        Timestamps,
+    )
 
 
 class LedParser:
-    """Class for processing raw indication retrieved from log files."""
+    """Class for processing raw LED indication data and converting it to mathematical models."""
 
     def __init__(
         self,
-        log_file_paths: Sequence[Path | str] | None = None,
-        led_search_pattern: re.Pattern = re.compile(r"LED(\d)=\[(\d+),(\d+),(\d+)]"),
+        *log_file_paths,
+        led_search_pattern: re.Pattern[str] = re.compile(r"LED(\d)=\[(\d+),(\d+),(\d+)]"),
         led_identifier: str = "LED",
-        logger: Logger = loguru.logger,
+        logger: loguru._logger.Logger = loguru.logger,
     ) -> None:
-        self._log_file_paths: tuple[Path, ...] = tuple(Path(path) for path in log_file_paths) if log_file_paths else ()
-        self._log_search_pattern: Final[re.Pattern] = led_search_pattern
-        self._led_identifier: Final[str] = led_identifier
-        self._logger: Logger = logger
+        self._log_file_paths: tuple[Path, ...] = tuple(Path(path) for path in log_file_paths)
+        self._log_search_pattern: re.Pattern[str] = led_search_pattern
+        self._led_identifier: str = led_identifier
+        self._logger: loguru._logger.Logger = logger
 
-        self._parsed_patterns: dict[Path, list[LEDPattern]] = {}
+        self._parsed_patterns: ParsedPatterns = {}
 
     @property
-    def patterns(self) -> dict[Path, list[LEDPattern]]:
+    def patterns(self) -> ParsedPatterns:
         return self._parsed_patterns
 
     async def _create_temp_log_file(self, source_file: Path) -> tempfile.NamedTemporaryFile:
@@ -69,7 +73,7 @@ class LedParser:
         temp_file: tempfile.NamedTemporaryFile,
         *,
         log_line_length: int = 3,
-    ) -> list[dict[str, str]] | None:
+    ) -> RawPattern | None:
         """
         Read indication logs from a temporary log file.
 
@@ -110,7 +114,7 @@ class LedParser:
 
         return led_patterns
 
-    async def _retrieve_patterns(self, log_file: Path) -> list[dict[str, str]]:
+    async def _retrieve_patterns(self, log_file: Path) -> RawPattern:
         """
         Initial parsing of indication patterns to split them and convert them from strings to dictionaries.
 
@@ -130,9 +134,10 @@ class LedParser:
             self._logger.error(f"Error parsing log file: {e!r}")
             return []
 
-    def _check_color_events(self, log_line: str) -> dict[str, LED] | None:
+    def _extract_led_data(self, log_line: str) -> LedRgbData | None:
         """
-        Extract all LEDs from log_line and return as dict with keys {"LED1": LED(...), "LED2": LED(...), ...}
+        Extract all LEDs from log_line and return as dict with RGB values.
+        Returns: {"LED1": {"r": 255, "g": 0, "b": 128}, "LED2": {...}, ...}
         If there is a duplicate LED in line, only the first one is used.
         """
         led_matches = self._log_search_pattern.findall(log_line)
@@ -146,46 +151,69 @@ class LedParser:
             led_key = f"{self._led_identifier}{led_num}"
 
             if led_key not in led_dict:
-                rgb = (int(r), int(g), int(b))
-                led_dict[led_key] = LED(rel_time=0.0, color=Color(*rgb), abs_time=0.0)
+                led_dict[led_key] = {
+                    "r": int(r),
+                    "g": int(g),
+                    "b": int(b),
+                }
 
         return led_dict
 
-    def _recalculate_led_times(self, sequences: dict, timestamps_per_led: dict) -> list[LEDSequence] | None:
+    def _convert_to_mathematical_model(
+        self,
+        led_data: LedSequence,
+        timestamps: Timestamps,
+    ) -> dict[str, dict[str, list[Record]]]:
         """
-        Recalculate relative and absolute for all LED sequences.
+        Convert LED data to mathematical model format.
 
-        :param sequences: dictionary containing LED sequences data
-        :param timestamps_per_led: dictionary containing timestamps for each LED
+        :param led_data: Dictionary containing LED sequences with RGB values
+        :param timestamps: Dictionary containing timestamps for each LED
+        :return: Mathematical model with Records containing Points for each color channel
         """
+        if not led_data or not timestamps:
+            return {}
+
         all_timestamps = []
-        for timestamps in timestamps_per_led.values():
-            all_timestamps.extend(timestamps)
+        for led_timestamps in timestamps.values():
+            all_timestamps.extend(led_timestamps)
 
         if not all_timestamps:
-            return None
+            return {}
 
         global_start_time = min(all_timestamps)
 
-        led_sequences = []
-        for led_key, sequence in sequences.items():
-            led_timestamps = timestamps_per_led[led_key]
+        result = {}
+
+        for led_key, data_points in led_data.items():
+            led_timestamps = timestamps[led_key]
             led_start_time = min(led_timestamps)
 
-            for i, led_obj in enumerate(sequence):
-                current_timestamp = led_timestamps[i]
-                led_obj.rel_time = self.get_date_diff(led_start_time, current_timestamp)
-                led_obj.abs_time = self.get_date_diff(global_start_time, current_timestamp)
+            result[led_key] = {
+                "r": [Record(coordinates=[])],
+                "g": [Record(coordinates=[])],
+                "b": [Record(coordinates=[])],
+            }
 
-            led_sequences.append(LEDSequence(int(led_key.removeprefix(self._led_identifier)), sequence))
-        return led_sequences
+            for i, data_point in enumerate(data_points):
+                current_timestamp = led_timestamps[i]
+
+                rel_time = self.get_date_diff(led_start_time, current_timestamp)
+                abs_time = self.get_date_diff(global_start_time, current_timestamp)
+
+                for color_channel in ["r", "g", "b"]:
+                    color_value = data_point[color_channel]
+                    point = Point(x=rel_time, y=color_value, z=abs_time)
+                    result[led_key][color_channel][0].coordinates.append(point)
+
+        return result
 
     async def parse_log_file(self, log_file_path: Path, *, ignore_before_date: datetime | None = None) -> None:
         """
-        Parse a single log file to extract LED patterns and sequences.
+        Parse a single log file to extract LED patterns and convert to mathematical models.
 
         Processes raw log data to identify LED color events, calculates relative and absolute
-        timing for each LED sequence, and stores the parsed patterns.
+        timing for each LED sequence, and stores the parsed patterns as mathematical models.
 
         :param log_file_path: Path to the log file to be parsed
         :param ignore_before_date: optional datetime filter - entries before this date will be ignored
@@ -197,32 +225,39 @@ class LedParser:
             return
 
         self._logger.debug(f"Retrieved {len(raw_patterns)} pattern(s) from log file `{log_file_path}`.")
+
         for count, raw_pattern in enumerate(raw_patterns, 1):
-            sequences = {}
-            timestamps_per_led = {}
-            for timestamp, log_line in raw_pattern.items():
-                date = datetime.fromisoformat(timestamp)
+            led_data = {}
+            timestamps = {}
+
+            for timestamp_str, log_line in raw_pattern.items():
+                date = datetime.fromisoformat(timestamp_str)
                 if ignore_before_date and date < ignore_before_date:
                     continue
 
-                parsed_line = self._check_color_events(log_line)
+                parsed_line = self._extract_led_data(log_line)
 
                 if parsed_line is None:
                     continue
 
-                for led_key, led_data in parsed_line.items():
-                    if led_key not in sequences:
-                        sequences[led_key] = []
-                        timestamps_per_led[led_key] = []
+                for led_key, rgb_values in parsed_line.items():
+                    if led_key not in led_data:
+                        led_data[led_key] = []
+                        timestamps[led_key] = []
 
-                    sequences[led_key].append(led_data)
-                    timestamps_per_led[led_key].append(date)
+                    led_data[led_key].append(rgb_values)
+                    timestamps[led_key].append(date)
 
-            parsed_sequences = self._recalculate_led_times(sequences, timestamps_per_led)
-            if parsed_sequences is None:
+            mathematical_pattern = self._convert_to_mathematical_model(led_data, timestamps)
+
+            if not mathematical_pattern:
                 self._logger.warning(f"Parsing of pattern #{count} is skipped!")
                 continue
-            parsed_patterns.append(LEDPattern("", "", sequences=parsed_sequences))
+
+            parsed_patterns.append(mathematical_pattern)
+
+        if log_file_path not in self._parsed_patterns:
+            self._parsed_patterns[log_file_path] = []
         self._parsed_patterns[log_file_path] = parsed_patterns
 
     async def parse_patterns(self, *, ignore_before_date: datetime | None = None) -> None:

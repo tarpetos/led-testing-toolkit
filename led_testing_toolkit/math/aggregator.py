@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from itertools import cycle
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import matplotlib as mpl
@@ -10,10 +11,10 @@ import numpy as np
 from matplotlib.colors import rgb2hex
 from numpy import ndarray
 
-from .models import Dataset, Point, Record
+from led_testing_toolkit.math.models import Dataset, Point, Record
 
 if TYPE_CHECKING:
-    from .interpolator import Interpolator
+    from led_testing_toolkit.math.interpolator import Interpolator
 
 
 class Aggregator:
@@ -71,7 +72,7 @@ class Aggregator:
         await self._interpolate()
         await self._aggregate()
 
-    def build_plots(self, **kwargs) -> str | None:
+    def build_plots(self, **kwargs) -> Path:
         plt.figure(figsize=(10, 6))
         colors = self.get_plot_colors()
 
@@ -88,8 +89,10 @@ class Aggregator:
         plt.grid(True)
         plt.tight_layout()
 
-        save_path = kwargs.get("save_path")
+        save_path = Path(kwargs.get("save_path"))
+        save_path.parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(save_path) if save_path else plt.show()
+        plt.close()
         return save_path
 
     @staticmethod

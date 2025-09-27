@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class Point(BaseModel):
     x: float | int
     y: float | int
+    z: float | int = 0.0
 
 
 class Record(BaseModel):

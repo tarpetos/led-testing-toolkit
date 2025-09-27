@@ -7,7 +7,7 @@ import numpy as np
 from numpy import ndarray
 
 if TYPE_CHECKING:
-    from .models import Point
+    from led_testing_toolkit.math.models import Point
 
 
 class Interpolator:
