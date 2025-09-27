@@ -1,7 +1,8 @@
 [run]
 source =
+    api
     led_testing_toolkit
-    demo_web
+
 omit =
     */__init__.py
 
