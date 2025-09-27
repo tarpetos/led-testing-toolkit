@@ -36,7 +36,7 @@ async def broadcast_loop() -> None:
                 await manager.broadcast_state()
         except Exception:
             traceback.print_exc()
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(0.01)
 
 
 @router.websocket("/ws/led")

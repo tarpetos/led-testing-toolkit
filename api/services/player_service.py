@@ -112,7 +112,7 @@ class PlayerService:
                             self.paused_elapsed_time = self.total_duration
                         if self.is_playing:
                             self._update_led_states_for_time(current_time)
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(0.01)
 
     async def resume(self) -> None:
         async with self.lock:
