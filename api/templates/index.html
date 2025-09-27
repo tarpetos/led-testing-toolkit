@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/x-icon" href="../static/images/favicon.ico">
+    <title>LTT API</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
+    <link rel="stylesheet" href="../static/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>🔴🟢🔵 LED TESTING TOOLKIT API</h1>
+        <div id="status" class="status disconnected">Disconnected</div>
+      </header>
+
+      <div class="upload-section">
+        <div class="control-group">
+          <h4>SELECT DEVICE</h4>
+          <label for="deviceSelector"></label
+          ><select id="deviceSelector"></select>
+        </div>
+        <div class="pattern-selector">
+          <h4>SELECT FROM DATABASE</h4>
+          <div class="control-group">
+            <label for="etalonPatternSelector">Etalon</label>
+            <select id="etalonPatternSelector" disabled></select>
+          </div>
+          <div class="control-group">
+            <label for="measuredCollectionSelector">Measured</label>
+            <select id="measuredCollectionSelector" disabled></select>
+          </div>
+        </div>
+
+        <div class="separator">OR</div>
+
+        <div class="raw-log-section">
+          <h4>UPLOAD RAW LOG FILE</h4>
+          <div class="drop-zone" id="dropZone">
+            <div class="drop-zone-content">
+              <i class="fa-solid fa-upload"></i>
+              <span class="drop-zone__prompt">Drag-and-drop *.log file here or click to select</span>
+            </div>
+            <input type="file" id="logFileInput" class="drop-zone__input" accept=".log"/>
+          </div>
+          <div class="control-group">
+            <select id="logPatternSelector" disabled></select>
+          </div>
+        </div>
+      </div>
+
+      <div id="ledContainer" class="led-container"></div>
+
+      <div id="playerControls" class="player-controls hidden">
+        <div class="time-info">
+          <span id="timeInfo">00:00 / 00:00</span>
+        </div>
+        <div class="main-buttons">
+          <button id="playBtn" onclick="togglePlay()" class="player-btn play-btn" aria-label="Play/Pause">
+            <i class="fa-solid fa-play icon-play"></i>
+            <i class="fa-solid fa-pause icon-pause"></i>
+          </button>
+          <button onclick="stopPlayback()" class="player-btn stop-btn" aria-label="Stop">
+            <i class="fa-solid fa-stop"></i>
+          </button>
+        </div>
+        <input type="range" id="progressSlider" min="0" value="0" step="0.1" oninput="handleSliderInput(this)"/>
+      </div>
+    </div>
+    <script src="../static/script.js"></script>
+  </body>
+</html>
