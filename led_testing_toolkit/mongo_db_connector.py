@@ -60,7 +60,7 @@ async def get_async_mongo_client(
 class MongoDbConnector:
     def __init__(
         self,
-        db_name: str,
+        db_name: str | None = None,
         mongo_client: AsyncMongoClient | None = None,
         logger: Logger = loguru.logger,
     ) -> None:
@@ -81,7 +81,14 @@ class MongoDbConnector:
         """Initialize the connector with the database connection."""
         if self.client is None:
             self.client = await get_async_mongo_client()
+        self.db_name = self.db_name or os.getenv("MONGO_DB_NAME")
         self.db = self.client[self.db_name]
+
+    async def list_collections(self) -> list[str]:
+        """List all collections in the database."""
+        if self.db is None:
+            await self.initialize()
+        return await self.db.list_collection_names()
 
     async def use_collection(self, collection_name: str, *, auto_create: bool = True) -> None:
         """
@@ -139,6 +146,20 @@ class MongoDbConnector:
         if not query and result is None:
             self.logger.info(f"Collection {self.collection.name} has no data!")
         return result
+
+    async def read_random(self) -> Mapping[str, Any] | None:
+        """
+        Read a random document from the collection.
+
+        :return: a single random document or None
+        """
+        if self.collection is None:
+            raise ValueError("No collection selected! Call `use_collection` first.")
+
+        pipeline = [{"$sample": {"size": 1}}]
+        async for doc in await self.collection.aggregate(pipeline):
+            return doc
+        return None
 
     async def read_field(self, field: str) -> list:
         """

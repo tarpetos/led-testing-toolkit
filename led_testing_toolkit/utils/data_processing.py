@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import random
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -13,6 +14,7 @@ from led_testing_toolkit.math.interpolator import Interpolator
 from led_testing_toolkit.math.models import Dataset, Point, Record
 from led_testing_toolkit.mongo_db_connector import MongoDbConnector
 from led_testing_toolkit.utils.collection_name import (
+    ETALONS_COLLECTION_SUFFIX,
     parse_collection_name,
     validate_etalons_collection_name,
     validate_measured_collection_name,
@@ -107,7 +109,7 @@ def compute_average_abs_times(records: list[Record]) -> list[float]:
 async def read_measured(
     name: str,
     *,
-    db_name: str = "led_db",
+    db_name: str | None = os.getenv("MONGO_DB_NAME"),
     get_random: bool = False,
 ) -> NormalizedLedData:
     measure_collection_name = validate_measured_collection_name(name)
@@ -123,15 +125,15 @@ async def read_measured(
 
 
 async def read_etalon(
-    name: str,
+    pattern_name: str,
+    etalon_collection_name: str,
     *,
-    db_name: str = "led_db",
-    etalon_collection_name: str = "FD-ETALONS",
+    db_name: str | None = os.getenv("MONGO_DB_NAME"),
 ) -> NormalizedLedData:
     etalon_collection_name = validate_etalons_collection_name(etalon_collection_name)
     async with MongoDbConnector(db_name) as connector:
         await connector.use_collection(etalon_collection_name)
-        etalon_data = await connector.read({"_id": name.upper()}, projection={"_id": 0})
+        etalon_data = await connector.read({"_id": pattern_name.upper()}, projection={"_id": 0})
 
     return await extract_led_rgb_data(etalon_data)
 
@@ -139,23 +141,22 @@ async def read_etalon(
 async def generate_etalon(
     measure_collection_name: str,
     *,
-    db_name: str = "led_db",
-    etalon_collection_name: str = "FD-ETALONS",
+    db_name: str | None = os.getenv("MONGO_DB_NAME"),
     plot_dir_path: Path | str = Path(),
-) -> None:
+) -> str:
     plot_dir_path = Path(plot_dir_path)
     if not plot_dir_path.is_dir():
         raise ValueError(f"`{plot_dir_path}` is not a valid directory path!")
 
-    etalon_collection_name = validate_etalons_collection_name(etalon_collection_name)
-    _, etalon_record_key = parse_collection_name(measure_collection_name)
+    device_name, etalon_record_key = parse_collection_name(measure_collection_name)
+    etalon_collection_name = validate_etalons_collection_name(f"{device_name}-{ETALONS_COLLECTION_SUFFIX}")
 
     normalized_dataset = await read_measured(measure_collection_name, db_name=db_name)
     async with MongoDbConnector(db_name) as connector:
         await connector.use_collection(etalon_collection_name, auto_create=True)
 
         etalons_data, abs_avg_times = {}, {}
-        base_plot_path = Path(plot_dir_path, "aggregated")
+        base_plot_path = Path(plot_dir_path, etalon_record_key.lower(), "aggregated")
         interpolator = Interpolator(lower_bound=0, upper_bound=255)
         for led, rgb_dataset in normalized_dataset.items():
             etalons_data[led] = {}
@@ -167,13 +168,14 @@ async def generate_etalon(
             for color, aggregator in tasks:
                 await aggregator.start()
                 aggregator.build_plots(
-                    title=f"{led.upper()}({color.upper()}) channel - aggregated data",
+                    title=f"{led.upper()} ({color.upper()} channel) - aggregated data",
                     save_path=base_plot_path / led.lower() / color.lower(),
                 )
                 etalons_data[led][color] = aggregator.etalon
 
         etalon_dict = convert_etalon_to_db_format(etalons_data, abs_avg_times)
         await connector.upsert(query={"_id": etalon_record_key}, update_data=etalon_dict)
+    return etalon_collection_name
 
 
 async def make_comparison(
@@ -187,7 +189,7 @@ async def make_comparison(
     comparator = Comparator(etalon, measured, Interpolator(lower_bound=0, upper_bound=255))
     accuracy = await comparator.start()
     comparator.build_plots(
-        title=f"{led.upper()}({color.upper()}) channel - comparison (similarity: {accuracy:.2f}%)",
+        title=f"{led.upper()} ({color.upper()} channel) - comparison (similarity: {accuracy:.2f}%)",
         save_path=plot_path,
     )
     return accuracy
