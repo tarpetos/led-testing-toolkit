@@ -20,6 +20,7 @@ if TYPE_CHECKING:
         RawPattern,
         Timestamps,
     )
+    from loguru._logger import Logger
 
 
 class LedParser:
@@ -30,12 +31,12 @@ class LedParser:
         *log_file_paths,
         led_search_pattern: re.Pattern[str] = re.compile(r"LED(\d)=\[(\d+),(\d+),(\d+)]"),
         led_identifier: str = "LED",
-        logger: loguru._logger.Logger = loguru.logger,
+        logger: Logger = loguru.logger,
     ) -> None:
         self._log_file_paths: tuple[Path, ...] = tuple(Path(path) for path in log_file_paths)
         self._log_search_pattern: re.Pattern[str] = led_search_pattern
         self._led_identifier: str = led_identifier
-        self._logger: loguru._logger.Logger = logger
+        self._logger: Logger = logger
 
         self._parsed_patterns: ParsedPatterns = {}
 

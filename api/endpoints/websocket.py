@@ -17,13 +17,25 @@ class ConnectionManager:
         self.active_connections.append(websocket)
 
     def disconnect(self, websocket: WebSocket) -> None:
-        self.active_connections.remove(websocket)
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
 
     async def broadcast_state(self) -> None:
         state = player_service.get_state()
         state_json = state.model_dump_json()
+        disconnected_connections = []
+
         for connection in list(self.active_connections):
-            await connection.send_text(state_json)
+            try:
+                await connection.send_text(state_json)
+            except WebSocketDisconnect:
+                disconnected_connections.append(connection)
+            except Exception:
+                disconnected_connections.append(connection)
+                traceback.print_exc()
+
+        for connection in disconnected_connections:
+            self.disconnect(connection)
 
 
 manager = ConnectionManager()

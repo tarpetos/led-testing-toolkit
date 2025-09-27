@@ -137,7 +137,7 @@ class PlayerService:
             if not self.pattern_data:
                 return
 
-            safe_seek_time = max(0, min(seek_time, self.total_duration))
+            safe_seek_time = max(0.0, min(seek_time, self.total_duration))
             self.paused_elapsed_time = safe_seek_time
             if self.is_playing:
                 self.playback_start_time = time.time() - self.paused_elapsed_time
@@ -155,7 +155,7 @@ class PlayerService:
         if self.pattern_data:
             status.total_duration = self.total_duration
             current_time = (time.time() - self.playback_start_time) if self.is_playing else self.paused_elapsed_time
-            status.current_time = max(0, min(current_time, self.total_duration))
+            status.current_time = max(0.0, min(current_time, self.total_duration))
 
             if not self.is_playing:
                 self._update_led_states_for_time(status.current_time)
