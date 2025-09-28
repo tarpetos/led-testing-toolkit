@@ -75,7 +75,7 @@ class FadePattern(Pattern):
 class ChaserPattern(Pattern):
     """A 'larson scanner' pattern where a pulse of light moves across LEDs."""
 
-    def __init__(self, config: ChaserPatternConfig):
+    def __init__(self, config: ChaserPatternConfig) -> None:
         super().__init__(config.led_ids, config.start_time, config.end_time)
         self.config = config
 
@@ -101,7 +101,7 @@ class ChaserPattern(Pattern):
 class KeyframesPattern(Pattern):
     """A pattern that interpolates between a series of defined color keyframes."""
 
-    def __init__(self, config: KeyframesPatternConfig):
+    def __init__(self, config: KeyframesPatternConfig) -> None:
         super().__init__(config.led_ids, config.start_time, config.end_time)
         self.config = config
 
@@ -134,7 +134,7 @@ class KeyframesPattern(Pattern):
 class SimplePattern(Pattern):
     """A simple pattern for lighting all LEDs at once or sequentially."""
 
-    def __init__(self, num_leds: int, color: Color, fade_s: float, sequence: str):
+    def __init__(self, num_leds: int, color: Color, fade_s: float, sequence: str) -> None:
         super().__init__(list(range(1, num_leds + 1)), 0.0, float("inf"))
         self.color = color
         self.fade_s = fade_s

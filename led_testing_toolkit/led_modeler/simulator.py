@@ -11,7 +11,7 @@ class PhotoresistorSimulator:
     to ideal LED color values to mimic a real-world analog sensor.
     """
 
-    def __init__(self, led_ids: list[str], noise_level: float, lag: float, reporting_chance: float):
+    def __init__(self, led_ids: list[str], noise_level: float, lag: float, reporting_chance: float) -> None:
         self.led_ids = led_ids
         self.noise_level = noise_level
         self.lag = lag

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import random
+import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -135,6 +136,9 @@ async def read_etalon(
         await connector.use_collection(etalon_collection_name)
         etalon_data = await connector.read({"_id": pattern_name.upper()}, projection={"_id": 0})
 
+    if etalon_data is None:
+        raise ValueError(f"No etalon data found for pattern name `{pattern_name}`!")
+
     return await extract_led_rgb_data(etalon_data)
 
 
@@ -156,7 +160,7 @@ async def generate_etalon(
         await connector.use_collection(etalon_collection_name, auto_create=True)
 
         etalons_data, abs_avg_times = {}, {}
-        base_plot_path = Path(plot_dir_path, etalon_record_key.lower(), "aggregated")
+        base_plot_path = Path(plot_dir_path, etalon_record_key.lower(), "aggregated", str(uuid.uuid4()))
         interpolator = Interpolator(lower_bound=0, upper_bound=255)
         for led, rgb_dataset in normalized_dataset.items():
             etalons_data[led] = {}
@@ -191,6 +195,8 @@ async def make_comparison(
     comparator.build_plots(
         title=f"{led.upper()} ({color.upper()} channel) - comparison (similarity: {accuracy:.2f}%)",
         save_path=plot_path,
+        xlabel="Time (s)",
+        ylabel="Color (0-255)",
     )
     return accuracy
 
@@ -201,7 +207,7 @@ async def make_comparisons(
     plot_dir_path: Path | str = Path(),
 ) -> ComparisonResults:
     comparison_results = {}
-    base_plot_path = Path(plot_dir_path, "comparison")
+    base_plot_path = Path(plot_dir_path, "comparison", str(uuid.uuid4()))
     for led, rgb_data in normalized_etalon_data.items():
         comparison_results[led] = {}
         for color, etalon in rgb_data.items():

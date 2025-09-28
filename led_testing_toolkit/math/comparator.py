@@ -200,7 +200,6 @@ class Comparator:
             etalon_y,
             label=kwargs.get("etalon_label", "Etalon"),
             color=kwargs.get("etalon_color", "blue"),
-            linewidth=2,
         )
         ax1.plot(
             etalon_x,
@@ -208,9 +207,8 @@ class Comparator:
             label=kwargs.get("measured_label", "Measured"),
             color=kwargs.get("measured_color", "orange"),
             linestyle="--",
-            linewidth=2,
         )
-        ax1.set_title("Time Domain Comparison")
+        ax1.set_title("Time domain comparison")
         ax1.set_xlabel(kwargs.get("xlabel", "X"))
         ax1.set_ylabel(kwargs.get("ylabel", "Y"))
         ax1.legend(loc="upper right")
@@ -221,9 +219,15 @@ class Comparator:
         etalon_freq, etalon_mag = self._calculate_fft(etalon_y[valid_indices])
         measured_freq, measured_mag = self._calculate_fft(measured_y[valid_indices])
 
-        ax2.plot(etalon_freq, etalon_mag, label="Etalon Spectrum", color=kwargs.get("etalon_color", "blue"))
-        ax2.plot(measured_freq, measured_mag, label="Measured Spectrum", color=kwargs.get("measured_color", "orange"))
-        ax2.set_title("Frequency Spectrum Comparison")
+        ax2.plot(etalon_freq, etalon_mag, label="Etalon spectrum", color=kwargs.get("etalon_color", "blue"))
+        ax2.plot(
+            measured_freq,
+            measured_mag,
+            label="Measured spectrum",
+            color=kwargs.get("measured_color", "orange"),
+            linestyle="--",
+        )
+        ax2.set_title("Frequency spectrum comparison")
         ax2.set_xlabel("Frequency")
         ax2.set_ylabel("Magnitude")
         ax2.legend(loc="upper right")
