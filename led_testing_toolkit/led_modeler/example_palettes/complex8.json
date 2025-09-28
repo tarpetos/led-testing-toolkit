@@ -1,0 +1,43 @@
+[
+  {
+    "type": "fade",
+    "led_ids": [1, 2, 3, 4, 5, 6, 7, 8],
+    "start_time": 0,
+    "end_time": 4,
+    "color": [200, 200, 0],
+    "duration": 4,
+    "peak_time": 2
+  },
+  {
+    "type": "chaser",
+    "led_ids": [1, 2, 3, 4],
+    "start_time": 4,
+    "end_time": 15,
+    "color": [255, 0, 0],
+    "cycle_duration": 1.5,
+    "pulse_width": 0.3
+  },
+  {
+    "type": "chaser",
+    "led_ids": [8, 7, 6, 5],
+    "start_time": 4,
+    "end_time": 15,
+    "color": [0, 0, 255],
+    "cycle_duration": 1.5,
+    "pulse_width": 0.3
+  },
+  {
+    "type": "keyframes",
+    "led_ids": [1, 2, 3, 4, 5, 6, 7, 8],
+    "start_time": 15,
+    "end_time": 30,
+    "keyframes": [
+        {"time": 0.0, "color": [0, 255, 0]},
+        {"time": 2.0, "color": [0, 50, 0]},
+        {"time": 2.5, "color": [0, 255, 0]},
+        {"time": 4.5, "color": [0, 50, 0]},
+        {"time": 5.0, "color": [0, 255, 0]},
+        {"time": 7.0, "color": [0, 0, 0]}
+    ]
+  }
+]

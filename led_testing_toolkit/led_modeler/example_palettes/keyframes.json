@@ -1,0 +1,15 @@
+[
+  {
+    "type": "keyframes",
+    "led_ids": [1, 2, 3, 4],
+    "start_time": 0,
+    "end_time": 8,
+    "keyframes": [
+      { "time": 0.0, "color": [0, 0, 0] },
+      { "time": 2.0, "color": [255, 0, 0] },
+      { "time": 4.0, "color": [0, 0, 255] },
+      { "time": 6.0, "color": [255, 0, 0] },
+      { "time": 8.0, "color": [0, 0, 0] }
+    ]
+  }
+]
