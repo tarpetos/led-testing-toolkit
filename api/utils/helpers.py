@@ -13,8 +13,12 @@ def convert_normalized_to_raw_format(normalized_data: NormalizedLedData) -> dict
     Converts data from the LedParser's normalized format (separated by RGB channels)
     back into the raw, MongoDB-like format.
 
-    :param normalized_data: The output from LedParser, e.g., {'LED1': {'r': [Record], 'g': [Record], 'b': [Record]}}.
-    :return: Data in raw format, e.g., {'LED1': [[rel_time, [r,g,b], abs_time], ...]}.
+    Args:
+        normalized_data: The output from LedParser, e.g., {'LED1': {'r': [Record], 'g': [Record], 'b': [Record]}}.
+
+    Returns:
+        Data in raw format, e.g., {'LED1': [[rel_time, [r,g,b], abs_time], ...]}.
+
     """
     raw_data = {}
     if not normalized_data:

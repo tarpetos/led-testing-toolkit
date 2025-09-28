@@ -29,7 +29,7 @@ class LedParser:
     def __init__(
         self,
         *log_file_paths,
-        led_search_pattern: re.Pattern[str] = re.compile(r"LED(\d)=\[(\d+),(\d+),(\d+)]"),
+        led_search_pattern: re.Pattern[str] = re.compile(r"LED(\d+)=\[(\d+),(\d+),(\d+)]"),
         led_identifier: str = "LED",
         logger: Logger = loguru.logger,
     ) -> None:
@@ -46,10 +46,14 @@ class LedParser:
 
     async def _create_temp_log_file(self, source_file: Path) -> tempfile.NamedTemporaryFile:
         """
-        Create a temporary copy of the log file to read from.
+        Creates a temporary copy of the log file to read from.
 
-        :param source_file: Path to the original log file
-        :return: NamedTemporaryFile object
+        Args:
+            source_file: Path to the original log file.
+
+        Returns:
+            NamedTemporaryFile object.
+
         """
         if not source_file.exists():
             raise FileNotFoundError(f"Source log file `{source_file}` not found!")
@@ -76,16 +80,19 @@ class LedParser:
         log_line_length: int = 3,
     ) -> RawPattern | None:
         """
-        Read indication logs from a temporary log file.
+        Reads indication logs from a temporary log file.
 
         Splits them into 3 parts:
             1. Timestamp
             2. Logging level
             3. Message itself
+        Args:
+            temp_file: A temporary log file object opened for reading.
+            log_line_length: The expected length of each message list after splitting.
 
-        :param temp_file: a temporary log file object opened for reading
-        :param log_line_length: the expected length of each message list after splitting
-        :return: preprocessed patterns
+        Returns:
+            Preprocessed patterns.
+
         """
         led_patterns = []
         current_pattern = {}
@@ -119,8 +126,12 @@ class LedParser:
         """
         Initial parsing of indication patterns to split them and convert them from strings to dictionaries.
 
-        :param log_file: file to read patterns from
-        :return: preprocessed patterns
+        Args:
+            log_file: File to read patterns from.
+
+        Returns:
+            Preprocessed patterns.
+
         """
         try:
             temp_file = await self._create_temp_log_file(log_file)
@@ -137,9 +148,15 @@ class LedParser:
 
     def _extract_led_data(self, log_line: str) -> LedRgbData | None:
         """
-        Extract all LEDs from log_line and return as dict with RGB values.
-        Returns: {"LED1": {"r": 255, "g": 0, "b": 128}, "LED2": {...}, ...}
-        If there is a duplicate LED in line, only the first one is used.
+        Extracts all LEDs from log_line and return as dict with RGB values.
+
+        Args:
+            log_line: Raw log line.
+
+        Returns:
+            {"LED1": {"r": 255, "g": 0, "b": 128}, "LED2": {...}, ...}
+            If there is a duplicate LED in line, only the first one is used.
+
         """
         led_matches = self._log_search_pattern.findall(log_line)
 
@@ -166,11 +183,15 @@ class LedParser:
         timestamps: Timestamps,
     ) -> dict[str, dict[str, list[Record]]]:
         """
-        Convert LED data to mathematical model format.
+        Converts LED data to mathematical model format.
 
-        :param led_data: Dictionary containing LED sequences with RGB values
-        :param timestamps: Dictionary containing timestamps for each LED
-        :return: Mathematical model with Records containing Points for each color channel
+        Args:
+            led_data: Dictionary containing LED sequences with RGB values.
+            timestamps: Dictionary containing timestamps for each LED.
+
+        Returns:
+            Mathematical model with Records containing Points for each color channel.
+
         """
         if not led_data or not timestamps:
             return {}
@@ -211,13 +232,18 @@ class LedParser:
 
     async def parse_log_file(self, log_file_path: Path, *, ignore_before_date: datetime | None = None) -> None:
         """
-        Parse a single log file to extract LED patterns and convert to mathematical models.
+        Parses a single log file to extract LED patterns and convert to mathematical models.
 
         Processes raw log data to identify LED color events, calculates relative and absolute
         timing for each LED sequence, and stores the parsed patterns as mathematical models.
 
-        :param log_file_path: Path to the log file to be parsed
-        :param ignore_before_date: optional datetime filter - entries before this date will be ignored
+        Args:
+            log_file_path: Path to the log file to be parsed.
+            ignore_before_date: Optional datetime filter - entries before this date will be ignored
+
+        Returns:
+            None
+
         """
         log_file_path = Path(log_file_path)
         parsed_patterns = []
@@ -263,9 +289,14 @@ class LedParser:
 
     async def parse_patterns(self, *, ignore_before_date: datetime | None = None) -> None:
         """
-        Parse all configured log files concurrently to extract LED patterns.
+        Parses all configured log files concurrently to extract LED patterns.
 
-        :param ignore_before_date: datetime filter - log entries before this date will be ignored across all files
+        Args:
+            ignore_before_date: Datetime filter - log entries before this date will be ignored across all files
+
+        Returns:
+            None
+
         """
         async with TaskGroup() as tg:
             for log_file_path in self._log_file_paths:
@@ -280,11 +311,15 @@ class LedParser:
     @staticmethod
     def get_date_diff(start_time: datetime, end_time: datetime) -> float:
         """
-        Get the time difference between two specified dates.
+        Gets the time difference between two specified dates.
 
-        :param start_time: initial date
-        :param end_time: final date
-        :return: time difference in seconds
+        Args:
+            start_time: Initial date.
+            end_time: Final date.
+
+        Returns:
+            Time difference in seconds.
+
         """
         delta = end_time - start_time
         return delta.total_seconds()
