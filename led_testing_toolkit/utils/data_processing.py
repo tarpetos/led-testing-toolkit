@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import random
 import uuid
+from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -20,7 +21,6 @@ from led_testing_toolkit.utils.collection_name import (
     validate_etalons_collection_name,
     validate_measured_collection_name,
 )
-from led_testing_toolkit.utils.funcs import make_sequence
 
 if TYPE_CHECKING:
     from led_testing_toolkit.led_types import (
@@ -29,6 +29,11 @@ if TYPE_CHECKING:
         LedData,
         NormalizedLedData,
     )
+
+
+def make_sequence(obj: object) -> Sequence:
+    string_type: bool = isinstance(obj, (str, bytes))
+    return obj if isinstance(obj, Sequence) and not string_type else (obj,)
 
 
 async def extract_led_rgb_data(
