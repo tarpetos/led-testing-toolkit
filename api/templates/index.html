@@ -9,72 +9,81 @@
     <link rel="stylesheet" href="../static/styles.css" />
   </head>
   <body>
-    <div class="container">
-      <header>
-        <h1>🔴🟢🔵 LED TESTING TOOLKIT API</h1>
-        <div id="status" class="status disconnected">Disconnected</div>
-      </header>
-
-      <div class="upload-section">
-        <div class="control-group">
-          <h4>SELECT DEVICE</h4>
-          <div class="select-wrapper">
-            <label for="deviceSelector"></label
-            ><select id="deviceSelector"></select>
-          </div>
-        </div>
-        <div class="pattern-selector">
-          <h4>SELECT FROM DATABASE</h4>
+    <div class="main-content-wrapper">
+      <div class="container">
+        <header>
+          <h1>🔴🟢🔵 LED TESTING TOOLKIT API</h1>
+          <div id="status" class="status disconnected">Disconnected</div>
+        </header>
+        <div class="upload-section">
           <div class="control-group">
-            <label for="etalonPatternSelector">Etalon</label>
+            <h4>SELECT DEVICE</h4>
             <div class="select-wrapper">
-              <select id="etalonPatternSelector" disabled></select>
+              <label for="deviceSelector"></label
+              ><select id="deviceSelector"></select>
             </div>
           </div>
-          <div class="control-group">
-            <label for="measuredCollectionSelector">Measured</label>
-            <div class="select-wrapper">
-              <select id="measuredCollectionSelector" disabled></select>
+          <div class="pattern-selector">
+            <h4>SELECT FROM DATABASE</h4>
+            <div class="control-group">
+              <label for="etalonPatternSelector">Etalon</label>
+              <div class="select-wrapper">
+                <select id="etalonPatternSelector" disabled></select>
+              </div>
+            </div>
+            <div class="control-group">
+              <label for="measuredCollectionSelector">Measured</label>
+              <div class="select-wrapper">
+                <select id="measuredCollectionSelector" disabled></select>
+              </div>
             </div>
           </div>
-        </div>
-
-        <div class="separator">OR</div>
-
-        <div class="raw-log-section">
-          <h4>UPLOAD RAW LOG FILE</h4>
-          <div class="drop-zone" id="dropZone">
-            <div class="drop-zone-content">
-              <i class="fa-solid fa-upload"></i>
-              <span class="drop-zone__prompt">Put file here or click to select</span>
+          <div class="separator">OR</div>
+          <div class="raw-log-section">
+            <h4>UPLOAD RAW LOG FILE</h4>
+            <div class="drop-zone" id="dropZone">
+              <div class="drop-zone-content">
+                <i class="fa-solid fa-upload"></i>
+                <span class="drop-zone__prompt">Put file here or click to select</span>
+              </div>
+              <input type="file" id="logFileInput" class="drop-zone__input" accept=".log"/>
             </div>
-            <input type="file" id="logFileInput" class="drop-zone__input" accept=".log"/>
-          </div>
-          <div class="control-group">
-            <div class="select-wrapper">
+            <div class="control-group">
               <select id="logPatternSelector" disabled></select>
             </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <div id="ledContainer" class="led-container"></div>
-
-      <div id="playerControls" class="player-controls hidden">
-        <div class="time-info">
-          <span id="timeInfo">00:00 / 00:00</span>
+    <div id="player-wrapper" class="hidden">
+        <div id="resize-handle" class="resize-handle"></div>
+        <div class="player-content">
+            <div id="ledContainer" class="led-container"></div>
+            <div class="player-controls-ui">
+                <div class="player-top-bar">
+                    <div class="time-info">
+                      <span id="timeInfo">00:00 / 00:00</span>
+                    </div>
+                    <div class="main-buttons">
+                        <button id="playBtn" onclick="togglePlay()" class="player-btn play-btn" aria-label="Play/Pause">
+                            <i class="fa-solid fa-play icon-play"></i>
+                            <i class="fa-solid fa-pause icon-pause"></i>
+                        </button>
+                        <button onclick="stopPlayback()" class="player-btn stop-btn" aria-label="Stop">
+                            <i class="fa-solid fa-stop"></i>
+                        </button>
+                    </div>
+                    <div class="player-view-controls">
+                        <button id="fullscreenBtn" class="player-view-btn" aria-label="Toggle Fullscreen">
+                            <i class="fa-solid fa-expand icon-expand"></i>
+                            <i class="fa-solid fa-compress icon-compress"></i>
+                        </button>
+                    </div>
+                </div>
+                <input type="range" id="progressSlider" min="0" value="0" step="0.001" oninput="handleSliderInput(this)"/>
+            </div>
         </div>
-        <div class="main-buttons">
-          <button id="playBtn" onclick="togglePlay()" class="player-btn play-btn" aria-label="Play/Pause">
-            <i class="fa-solid fa-play icon-play"></i>
-            <i class="fa-solid fa-pause icon-pause"></i>
-          </button>
-          <button onclick="stopPlayback()" class="player-btn stop-btn" aria-label="Stop">
-            <i class="fa-solid fa-stop"></i>
-          </button>
-        </div>
-        <input type="range" id="progressSlider" min="0" value="0" step="0.001" oninput="handleSliderInput(this)"/>
-      </div>
     </div>
     <script src="../static/script.js"></script>
   </body>
