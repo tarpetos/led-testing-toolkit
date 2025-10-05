@@ -163,7 +163,10 @@ async function selectLogPattern() {
 
 function connectWebSocket() {
     const protocol = location.protocol === "https:" ? "wss:" : "ws:";
-    ws = new WebSocket(`${protocol}//${location.hostname}:${location.port || 8000}/api/v1/ws/led`);
+    const port = location.port || (location.protocol === "http:" ? 80 : 443);
+    const usePort = location.port ? `:${location.port}` : (port !== (location.protocol === "http:" ? 80 : 443) ? `:${port}` : "");
+    const wsUrl = `${protocol}//${location.hostname}${usePort}/api/v1/ws/led`;
+    const ws = new WebSocket(wsUrl);
     ws.onopen = () => updateStatus("Connected", "connected");
     ws.onmessage = handleWebSocketMessage;
     ws.onclose = () => {
