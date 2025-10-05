@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import matplotlib as mpl
 import numpy as np
 from loguru import logger
 
@@ -29,6 +30,8 @@ if TYPE_CHECKING:
         LedData,
         NormalizedLedData,
     )
+
+mpl.use("Agg")
 
 
 def make_sequence(obj: object) -> Sequence:
@@ -65,7 +68,7 @@ async def extract_led_rgb_data(
                     else:
                         logger.warning(f"Invalid RGB data in {led_name}: {rgb_values}")
                 except (IndexError, TypeError) as e:
-                    logger.error(f"Error processing record for {led_name}: {e}")
+                    logger.error(f"Error processing record for {led_name}: {e!s}")
 
             led_data[led_name]["r"].append(Record(coordinates=red_points))
             led_data[led_name]["g"].append(Record(coordinates=green_points))
@@ -125,7 +128,7 @@ async def read_measured(
         raw_dataset = await connector.read({}, projection={"_id": 0}, find_many=True)
 
     if get_random:
-        raw_dataset = random.choice(raw_dataset)  # noqa: S311
+        raw_dataset = random.choice(raw_dataset)
 
     return await extract_led_rgb_data(raw_dataset)
 

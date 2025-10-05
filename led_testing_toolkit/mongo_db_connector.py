@@ -161,7 +161,7 @@ class MongoDbConnector:
 
         result = await self.collection.find_one(query, projection)
         if not query and result is None:
-            self.logger.info(f"Collection {self.collection.name} has no data!")
+            self.logger.warning(f"Collection {self.collection.name} has no data!")
         return result
 
     async def read_random(self) -> Mapping[str, Any] | None:

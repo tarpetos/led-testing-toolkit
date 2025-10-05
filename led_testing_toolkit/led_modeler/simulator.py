@@ -50,7 +50,7 @@ class PhotoresistorSimulator:
             final_value = np.clip(noisy_value, 0, 255).astype(int)
 
             change_magnitude = np.linalg.norm(final_value - self.last_reported_states[led_id])
-            should_report = random.random() < self.reporting_chance  # noqa: S311
+            should_report = random.random() < self.reporting_chance
 
             if change_magnitude > self.noise_level and should_report:
                 reportable_leds[led_id] = final_value.tolist()

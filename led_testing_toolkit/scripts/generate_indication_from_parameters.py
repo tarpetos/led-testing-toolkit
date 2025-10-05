@@ -1,4 +1,5 @@
 import argparse
+import asyncio
 
 from led_testing_toolkit.led_modeler.generator import LedGenerator
 from led_testing_toolkit.led_modeler.models import AppConfig
@@ -67,34 +68,54 @@ def get_all_led_ids(patterns: list[Pattern]) -> list[str]:
     return [f"LED{i + 1}" for i in range(max_id)]
 
 
-def main() -> None:
+async def main() -> None:
     parser = argparse.ArgumentParser(
         description="Photoresistor-simulated LED Indication Generator.",
         formatter_class=argparse.RawTextHelpFormatter,
     )
 
+    output_group = parser.add_argument_group("Output arguments")
+    output_group.add_argument(
+        "-o",
+        "--output-file",
+        default="led_indication.log",
+        help="Log file path (used if --save-to-db is not specified).",
+    )
+    output_group.add_argument(
+        "-stb",
+        "--save-to-db",
+        help="Save the generated pattern to the specified MongoDB collection (e.g., 'DEVICE-MEASURED').",
+    )
+
     parser.add_argument("mode", choices=["simulate", "instant"], help="Execution mode.")
     parser.add_argument("-d", "--duration", type=float, required=True, help="Total duration in seconds.")
-    parser.add_argument("-o", "--output_file", default="led_indication.log", help="Log file path.")
     parser.add_argument("-i", "--interval", default="15-40", help="Random log interval ms (e.g., '20' or '15-40').")
 
-    sim_group = parser.add_argument_group("Simulation Realism Arguments")
-    sim_group.add_argument("--noise", type=float, default=3.0, help="Std deviation of RGB noise. Higher is more noisy.")
+    sim_group = parser.add_argument_group("Simulation realism arguments")
     sim_group.add_argument(
+        "-n",
+        "--noise",
+        type=float,
+        default=3.0,
+        help="Std deviation of RGB noise. Higher is more noisy.",
+    )
+    sim_group.add_argument(
+        "-l",
         "--lag",
         type=float,
         default=0.4,
         help="Sensor reaction lag (0.0-1.0). Higher is more laggy.",
     )
     sim_group.add_argument(
+        "-rc",
         "--reporting-chance",
         type=float,
         default=0.85,
         help="Probability (0.0-1.0) to report a detected change.",
     )
 
-    simple_group = parser.add_argument_group("Simple Mode Arguments")
-    simple_group.add_argument("-n", "--num_leds", type=int, help="Number of LEDs.")
+    simple_group = parser.add_argument_group("Simple mode arguments")
+    simple_group.add_argument("-nl", "--num-leds", type=int, help="Number of LEDs.")
     simple_group.add_argument("-c", "--color", help="RGB color for all LEDs (e.g., '255,0,128').")
     simple_group.add_argument("-f", "--fade", type=float, default=0.5, help="Fade in duration in seconds.")
     simple_group.add_argument("-s", "--sequence", choices=["all_at_once", "sequential"], help="LED lighting sequence.")
@@ -118,9 +139,15 @@ def main() -> None:
         reporting_chance=config.reporting_chance,
     )
 
-    generator = LedGenerator(config, patterns, simulator, logger)
-    generator.run()
+    generator = LedGenerator(
+        config=config,
+        patterns=patterns,
+        simulator=simulator,
+        logger=logger,
+        save_to_db_collection=args.save_to_db,
+    )
+    await generator.run()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
