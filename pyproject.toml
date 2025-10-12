@@ -25,7 +25,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "aiofiles==24.1.0",
     "pytest==8.4.2",
     "pytest-cov==6.3.0",
     "ruff==0.12.12",
@@ -68,6 +67,7 @@ builtins = ["_"]
 ignore = [
     "ANN002", "ANN003", "ANN204",
     "BLE001",
+    "COM812",
     "D100", "D101", "D102", "D103", "D104", "D105", "D107", "D203", "D205", "D212", "D401",
     "DTZ005",
     "EM101", "EM102",

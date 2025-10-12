@@ -233,7 +233,7 @@ class MongoDbConnector:
 
     async def insert(
         self,
-        query: dict[str, Any],
+        query: dict[str, Any] | list[dict[str, Any]],
         insert_many: bool = False,
     ) -> InsertOneResult | InsertManyResult | None:
         """

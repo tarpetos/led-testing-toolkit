@@ -96,11 +96,7 @@ def convert_etalon_to_db_format(
             etalon_dict[led].append(
                 [
                     sum([r_p.x, g_p.x, b_p.x]) / 3,
-                    [
-                        r_p.y,
-                        g_p.y,
-                        b_p.y,
-                    ],
+                    [r_p.y, g_p.y, b_p.y],
                     abs_time,
                 ],
             )
@@ -230,3 +226,75 @@ async def make_comparisons(
             comparison_results[led][color] = {"plot_path": plot_path, "accuracy": accuracy}
 
     return comparison_results
+
+
+def convert_normalized_to_raw_format(normalized_data: NormalizedLedData) -> dict[str, list]:
+    """
+    Converts data from the LedParser's normalized format (separated by RGB channels)
+    back into the raw, MongoDB-like format.
+
+    Args:
+        normalized_data: The output from LedParser, e.g., {'LED1': {'r': [Record], 'g': [Record], 'b': [Record]}}.
+
+    Returns:
+        Data in raw format, e.g., {'LED1': [[rel_time, [r,g,b], abs_time], ...]}.
+
+    """
+    raw_data = {}
+    if not normalized_data:
+        return raw_data
+
+    for led_id, color_channels in normalized_data.items():
+        raw_data[led_id] = []
+
+        if not ("r" in color_channels and "g" in color_channels and "b" in color_channels):
+            continue
+
+        r_coords = color_channels["r"][0].coordinates
+        g_coords = color_channels["g"][0].coordinates
+        b_coords = color_channels["b"][0].coordinates
+
+        for r_point, g_point, b_point in zip(r_coords, g_coords, b_coords, strict=False):
+            raw_entry = [
+                r_point.x,
+                [r_point.y, g_point.y, b_point.y],
+                r_point.z,
+            ]
+            raw_data[led_id].append(raw_entry)
+
+    return raw_data
+
+
+async def save_patterns_to_db(
+    parsed_patterns: list[dict],
+    collection_name: str,
+    *,
+    db_name: str | None = None,
+) -> None:
+    """
+    Converts parsed LED patterns to a raw format and saves them to a MongoDB collection.
+
+    Args:
+        parsed_patterns: A list of parsed patterns from the Parser.
+        collection_name: The name of the MongoDB collection to save the data to.
+        db_name: The name of the database. If None, uses the default from environment variables.
+
+    """
+    if not parsed_patterns:
+        logger.warning("No parsed patterns to save to the database.")
+        return
+
+    logger.info(f"Preparing to save {len(parsed_patterns)} patterns to collection '{collection_name}'.")
+
+    raw_patterns = [convert_normalized_to_raw_format(p) for p in parsed_patterns]
+
+    try:
+        async with MongoDbConnector(db_name) as connector:
+            await connector.use_collection(collection_name, auto_create=True)
+            result = await connector.insert(raw_patterns, insert_many=True)
+            if result:
+                logger.success(
+                    f"Successfully inserted {len(result.inserted_ids)} documents into '{collection_name}'.",
+                )
+    except Exception:
+        logger.exception(f"Failed to save patterns to collection '{collection_name}'.")

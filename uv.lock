@@ -450,7 +450,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "aiofiles" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -478,7 +477,6 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "aiofiles", specifier = "==24.1.0" },
     { name = "pre-commit", specifier = "==4.1.0" },
     { name = "pytest", specifier = "==8.4.2" },
     { name = "pytest-cov", specifier = "==6.3.0" },

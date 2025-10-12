@@ -7,7 +7,7 @@ from api.models.parser_models import (
     SelectPatternRequest,
     UploadLogResponse,
 )
-from api.services.parser_service import log_parser_service
+from api.services.log_parser_service import log_parser_service
 from api.services.player_service import player_service
 
 router = APIRouter(prefix="/parser", tags=["Parser"])

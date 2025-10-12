@@ -92,19 +92,11 @@ class Comparator:
         return self._accuracy
 
     def _compare_sync(self, etalon_y: ndarray, measured_y: ndarray) -> float:
-        weights = {"mae": 0.4, "correlation": 0.3, "fft": 0.2, "point_count": 0.1}
-
         mae_accuracy = self._calculate_mae_accuracy(etalon_y=etalon_y, measured_y=measured_y)
         correlation_accuracy = self._calculate_correlation_accuracy(etalon_y=etalon_y, measured_y=measured_y)
         fft_accuracy = self._calculate_fft_accuracy(etalon_y=etalon_y, measured_y=measured_y)
-        point_count_accuracy = self._calculate_point_count_accuracy()
-
-        total_accuracy = (
-            mae_accuracy * weights["mae"]
-            + correlation_accuracy * weights["correlation"]
-            + fft_accuracy * weights["fft"]
-            + point_count_accuracy * weights["point_count"]
-        )
+        metrics = (mae_accuracy, correlation_accuracy, fft_accuracy)
+        total_accuracy = sum(metrics) / len(metrics)
         return max(0.0, total_accuracy)
 
     def _calculate_mae_accuracy(self, etalon_y: ndarray, measured_y: ndarray) -> float:
@@ -147,14 +139,6 @@ class Comparator:
         mse = np.mean((mag1_normalized - mag2_normalized) ** 2)
         accuracy = 100 * (1 - mse)
         return max(0.0, accuracy)
-
-    def _calculate_point_count_accuracy(self) -> float:
-        etalon_count = len(self._etalon.coordinates)
-        measured_count = len(self._measured.coordinates)
-        if etalon_count == 0 or measured_count == 0:
-            return 0.0
-        relative_error = abs(measured_count - etalon_count) / max(etalon_count, measured_count)
-        return max(0.0, 100 * (1 - relative_error))
 
     @staticmethod
     def _calculate_fft(y: ndarray) -> tuple[ndarray, ndarray]:
