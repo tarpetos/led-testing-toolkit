@@ -55,6 +55,11 @@ async def select_etalon(device_name: str, request: SelectEtalonRequest) -> Messa
     )
 
 
+@router.get("/measured/{collection_name}/records")
+async def get_measured_records(collection_name: str):
+    return await device_service.get_measured_records(collection_name)
+
+
 @router.post("/devices/{device_name}/measured/select")
 async def select_measured(device_name: str, request: SelectMeasuredRequest) -> MessageResponse:  # noqa: ARG001
     try:

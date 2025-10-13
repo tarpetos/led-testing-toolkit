@@ -3,7 +3,7 @@ import asyncio
 
 from led_testing_toolkit.utils.data_processing import read_measured
 from led_testing_toolkit.utils.make_indication_comparison import (
-    make_indication_comparison,
+    make_indication_comparison_results,
 )
 
 
@@ -31,7 +31,7 @@ async def main() -> None:
     cli_args = parser.parse_args()
 
     normalized_measured_data = await read_measured(cli_args.measured_collection, get_random=True)
-    await make_indication_comparison(
+    await make_indication_comparison_results(
         normalized_measured_data,
         cli_args.etalon_device,
         cli_args.etalon_pattern,

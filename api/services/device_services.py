@@ -27,6 +27,16 @@ class DeviceService:
         return dict(devices_data)
 
     @staticmethod
+    async def get_measured_records(collection_name: str) -> list[str]:
+        try:
+            async with MongoDbConnector() as connector:
+                await connector.use_collection(collection_name, auto_create=False)
+                records = await connector.read_field("_id")
+                return sorted([str(r) for r in records])
+        except Exception:
+            return []
+
+    @staticmethod
     async def get_etalon_patterns(etalon_collection: str) -> list[str]:
         async with MongoDbConnector() as connector:
             await connector.use_collection(etalon_collection, auto_create=False)

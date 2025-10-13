@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import io
 import warnings
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import matplotlib.pyplot as plt
@@ -161,13 +162,13 @@ class Comparator:
         await self._align_measured_with_etalons()
         return await self._compare()
 
-    def build_plots(self, **kwargs) -> Path | None:
+    def build_plots(self, **kwargs) -> str:
         if not self._is_checked:
             self._check_signal_strength()
 
         if self._is_weak:
             warnings.warn("Measured signal is too weak! Plotting ignored.", WeakSignalWarning, stacklevel=2)
-            return None
+            return ""
 
         if not self._aligned_data:
             raise ValueError("Aligned data is not available! Run start() method first.")
@@ -219,8 +220,7 @@ class Comparator:
 
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 
-        save_path = Path(kwargs.get("save_path"))
-        save_path.parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(save_path) if save_path else plt.show()
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png")
         plt.close()
-        return save_path
+        return base64.b64encode(buf.getvalue()).decode("utf-8")

@@ -12,7 +12,7 @@ from fastapi.templating import Jinja2Templates
 from starlette.templating import _TemplateResponse
 
 from api.core.config import API_HOST, API_PORT
-from api.endpoints import devices, log_parser, player, websocket
+from api.endpoints import devices, log_parser, player, tools, websocket
 from api.services.player_service import player_service
 from api.utils.helpers import cancel_task
 
@@ -40,6 +40,7 @@ app.include_router(devices.router, prefix="/api/v1")
 app.include_router(player.router, prefix="/api/v1")
 app.include_router(websocket.router, prefix="/api/v1")
 app.include_router(log_parser.router, prefix="/api/v1")
+app.include_router(tools.router, prefix="/api/v1")
 
 
 @app.get("/", response_class=HTMLResponse)

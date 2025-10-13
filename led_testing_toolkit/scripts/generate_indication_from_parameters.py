@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+from argparse import Namespace
 
 from led_testing_toolkit.led_modeler.generator import LedGenerator
 from led_testing_toolkit.led_modeler.models import AppConfig
@@ -68,6 +69,32 @@ def get_all_led_ids(patterns: list[Pattern]) -> list[str]:
     return [f"LED{i + 1}" for i in range(max_id)]
 
 
+async def generate_indication_from_parameters_main(args: Namespace) -> str:
+    config = AppConfig(**vars(args))
+
+    logger = configure_logger(config.output_file, "LedGenerator")
+    patterns = create_patterns_from_config(config)
+
+    led_ids = [f"LED{i + 1}" for i in range(config.num_leds)] if config.num_leds else get_all_led_ids(patterns)
+
+    simulator = PhotoresistorSimulator(
+        led_ids=led_ids,
+        noise_level=config.noise,
+        lag=config.lag,
+        reporting_chance=config.reporting_chance,
+    )
+
+    generator = LedGenerator(
+        config=config,
+        patterns=patterns,
+        simulator=simulator,
+        logger=logger,
+        save_to_db_collection=args.save_to_db,
+    )
+    await generator.run()
+    return config.output_file
+
+
 async def main() -> None:
     parser = argparse.ArgumentParser(
         description="Photoresistor-simulated LED Indication Generator.",
@@ -125,28 +152,7 @@ async def main() -> None:
 
     args = parser.parse_args()
 
-    config = AppConfig(**vars(args))
-
-    logger = configure_logger(config.output_file, "LedGenerator")
-    patterns = create_patterns_from_config(config)
-
-    led_ids = [f"LED{i + 1}" for i in range(config.num_leds)] if config.num_leds else get_all_led_ids(patterns)
-
-    simulator = PhotoresistorSimulator(
-        led_ids=led_ids,
-        noise_level=config.noise,
-        lag=config.lag,
-        reporting_chance=config.reporting_chance,
-    )
-
-    generator = LedGenerator(
-        config=config,
-        patterns=patterns,
-        simulator=simulator,
-        logger=logger,
-        save_to_db_collection=args.save_to_db,
-    )
-    await generator.run()
+    await generate_indication_from_parameters_main(args)
 
 
 if __name__ == "__main__":

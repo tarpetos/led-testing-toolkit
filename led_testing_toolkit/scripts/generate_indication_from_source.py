@@ -7,6 +7,11 @@ from loguru import logger
 from led_testing_toolkit.led_simulation_runner import SimulationRunner
 
 
+async def generate_indication_from_source_main(args: argparse.Namespace) -> list[str]:
+    runner = SimulationRunner(args, logger)
+    return await runner.run()
+
+
 async def main() -> None:
     parser = argparse.ArgumentParser(
         description="Generator for LED indication simulations from existing data.",
@@ -64,8 +69,7 @@ async def main() -> None:
 
     args = parser.parse_args()
 
-    runner = SimulationRunner(args, logger)
-    await runner.run()
+    await generate_indication_from_source_main(args)
 
 
 if __name__ == "__main__":

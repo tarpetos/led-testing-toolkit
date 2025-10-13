@@ -4,7 +4,162 @@ let devicesData = {};
 let currentPlayerStatus = {is_playing: false};
 let ledPositions = {};
 
+function openTab(evt, tabName) {
+    const tabContents = document.getElementsByClassName("tab-content");
+    for (let i = 0; i < tabContents.length; i++) {
+        tabContents[i].style.display = "none";
+    }
+
+    const tabLinks = document.getElementsByClassName("tab-link");
+    for (let i = 0; i < tabLinks.length; i++) {
+        tabLinks[i].className = tabLinks[i].className.replace(" active", "");
+    }
+
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+}
+
+function updateFileList(fileList, files) {
+    fileList.innerHTML = "";
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileItem = document.createElement("div");
+        fileItem.className = "file-item";
+        fileItem.textContent = file.name;
+        fileList.appendChild(fileItem);
+    }
+}
+
+function setupDropZone(dropZoneId, inputId, fileListId, multiple, callback) {
+    const dropZone = document.getElementById(dropZoneId);
+    const fileInput = document.getElementById(inputId);
+    const fileList = fileListId ? document.getElementById(fileListId) : null;
+
+    dropZone.addEventListener("click", () => fileInput.click());
+
+    fileInput.addEventListener("change", (e) => {
+        if (e.target.files.length) {
+            if (fileList) {
+                if (multiple) {
+                    updateFileList(fileList, e.target.files);
+                } else {
+                    updateFileList(fileList, [e.target.files[0]]);
+                }
+            }
+            if (callback) {
+                callback(e.target.files);
+            }
+        }
+    });
+
+    dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drop-zone--over");
+    });
+
+    ["dragleave", "dragend"].forEach((type) => {
+        dropZone.addEventListener(type, (e) => {
+            dropZone.classList.remove("drop-zone--over");
+        });
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            if (fileList) {
+                if (multiple) {
+                    updateFileList(fileList, e.dataTransfer.files);
+                } else {
+                    updateFileList(fileList, [e.dataTransfer.files[0]]);
+                }
+            }
+            if (callback) {
+                callback(e.dataTransfer.files);
+            }
+        }
+        dropZone.classList.remove("drop-zone--over");
+    });
+}
+
+function openSubTab(evt, tabName) {
+    const tabContents = document.getElementsByClassName("sub-tab-content");
+    for (let i = 0; i < tabContents.length; i++) {
+        tabContents[i].style.display = "none";
+    }
+
+    const tabLinks = document.getElementsByClassName("sub-tab-link");
+    for (let i = 0; i < tabLinks.length; i++) {
+        tabLinks[i].className = tabLinks[i].className.replace(" active", "");
+    }
+
+    document.getElementById(tabName).style.display = "block";
+    evt.currentTarget.className += " active";
+}
+
+function openModal(src) {
+    const modal = document.getElementById("plot-modal");
+    const modalImg = document.getElementById("modal-plot-img");
+    modal.style.display = "flex";
+    modalImg.src = src;
+}
+
 window.onload = () => {
+    const modal = document.getElementById("plot-modal");
+    const span = document.getElementsByClassName("close")[0];
+    span.onclick = function () {
+        modal.style.display = "none";
+    }
+    setupDropZone("split-drop-zone", "split-input-files", "split-file-list", true);
+    setupDropZone("source-drop-zone", "source-log-file", "source-file-list", false);
+    setupDropZone("compare-log-drop-zone", "compare-log-file", "compare-log-file-list", false, (files) => {
+        if (files.length) {
+            const file = files[0];
+            const logPatternSelector = document.getElementById("compare-log-pattern");
+            const spinner = document.getElementById("compare-log-spinner");
+            spinner.style.display = "flex";
+            logPatternSelector.innerHTML = '<option value="">Parsing log file...</option>';
+            logPatternSelector.disabled = true;
+            const formData = new FormData();
+            formData.append("file", file);
+            fetch('/api/v1/parser/upload-log', {
+                method: 'POST', body: formData,
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            throw new Error(text)
+                        });
+                    }
+                    return response.json();
+                })
+                .then(result => {
+                    populateLogPatternSelector(result, "compare-log-pattern");
+                    updateStatus(`Log parsed. Found ${result.length} patterns.`, 'connected');
+                })
+                .catch(error => {
+                    logPatternSelector.innerHTML = '<option value="">Parsing failed!</option>';
+                    alert("Error: " + error.message);
+                })
+                .finally(() => {
+                    spinner.style.display = "none";
+                });
+        }
+    });
+
+    setupDropZone("palette-drop-zone", "param-palette-file", null, false, (files) => {
+        if (files.length > 0) {
+            const file = files[0];
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const content = event.target.result;
+                document.getElementById('param-palette-text').value = content;
+                document.getElementById('param-palette').value = content;
+            };
+            reader.readAsText(file);
+        }
+    });
+
     const savedPositions = localStorage.getItem('savedLedPositions');
     if (savedPositions) {
         ledPositions = JSON.parse(savedPositions);
@@ -14,6 +169,431 @@ window.onload = () => {
     setupEventListeners();
     setupPlayerControls();
 };
+
+function setupEventListeners() {
+    document.getElementById("deviceSelector").addEventListener("change", handleDeviceSelection);
+    document.getElementById("etalonPatternSelector").addEventListener("change", selectEtalonPattern);
+    document.getElementById("measuredCollectionSelector").addEventListener("change", selectMeasuredPattern);
+    const dropZone = document.getElementById("dropZone");
+    const logFileInput = document.getElementById("logFileInput");
+    dropZone.addEventListener("click", () => logFileInput.click());
+    logFileInput.addEventListener("change", (e) => {
+        if (e.target.files.length) {
+            handleLogFileUpload(e.target.files[0]);
+        }
+    });
+    dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("drop-zone--over");
+    });
+    ["dragleave", "dragend"].forEach((type) => {
+        dropZone.addEventListener(type, (e) => {
+            dropZone.classList.remove("drop-zone--over");
+        });
+    });
+    dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        if (e.dataTransfer.files.length) {
+            logFileInput.files = e.dataTransfer.files;
+            handleLogFileUpload(e.dataTransfer.files[0]);
+        }
+        dropZone.classList.remove("drop-zone--over");
+    });
+    document.getElementById("logPatternSelector").addEventListener("change", selectLogPattern);
+
+    document.getElementById("compare-measured-collection").addEventListener("change", async (e) => {
+        const collectionName = e.target.value;
+        const recordSelector = document.getElementById("compare-measured-record");
+        recordSelector.innerHTML = '<option value="">Loading records...</option>';
+        recordSelector.disabled = true;
+
+        if (collectionName) {
+            try {
+                const response = await fetch(`/api/v1/measured/${collectionName}/records`);
+                if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+                const records = await response.json();
+                recordSelector.innerHTML = '<option value="">Select a record...</option>';
+                records.forEach((r, i) => recordSelector.add(new Option(`${i + 1} (${r})`, r)));
+                recordSelector.disabled = false;
+            } catch (error) {
+                console.error("Error loading measured records:", error);
+                recordSelector.innerHTML = '<option value="">Failed to load records</option>';
+            }
+        }
+    });
+
+    document.getElementById('split-logs-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const files = form.querySelector('#split-input-files').files;
+        if (files.length === 0) {
+            alert("Please select at least one file.");
+            return;
+        }
+        const formData = new FormData();
+        for (let i = 0; i < files.length; i++) {
+            formData.append('files', files[i]);
+        }
+        formData.append('max_patterns', form.querySelector('#split-max-patterns').value);
+        formData.append('output_dir', 'temp');
+        formData.append('start_pattern', form.querySelector('#split-start-pattern').value);
+        formData.append('end_pattern', form.querySelector('#split-end-pattern').value);
+
+        const outputDiv = document.getElementById('split-logs-output');
+        outputDiv.innerHTML = 'Processing...';
+
+        try {
+            const response = await fetch('/api/v1/tools/split-logs', {
+                method: 'POST', body: formData,
+            });
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/zip')) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'split_logs.zip';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                outputDiv.innerHTML = `<p><strong>Status:</strong> success</p><p><strong>Message:</strong> Files processed and downloaded successfully.</p>`;
+            } else {
+                const result = await response.json();
+                if (result.status === 'error') {
+                    throw new Error(result.message);
+                }
+            }
+        } catch (error) {
+            outputDiv.innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
+        }
+    });
+
+    document.getElementById('compare-patterns-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const measuredCollection = form.querySelector('#compare-measured-collection').value;
+        const measuredRecord = form.querySelector('#compare-measured-record').value;
+        const etalonDevice = form.querySelector('#compare-etalon-device').value;
+        const etalonPattern = form.querySelector('#compare-etalon-pattern').value;
+
+        const outputDiv = document.getElementById('compare-patterns-output');
+        outputDiv.innerHTML = 'Processing...';
+
+        fetch('/api/v1/tools/compare-patterns', {
+            method: 'POST', headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            }, body: new URLSearchParams({
+                measured_collection: measuredCollection,
+                measured_record: measuredRecord,
+                etalon_device: etalonDevice,
+                etalon_pattern: etalonPattern
+            })
+        })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        throw new Error(text)
+                    });
+                }
+                return response.json();
+            })
+            .then(result => {
+                if (result.status === 'error') {
+                    throw new Error(result.message);
+                }
+                let plotsHtml = '<div class="plots-grid">';
+                for (const led in result.results.leds) {
+                    plotsHtml += '<div class="led-row">';
+                    for (const color in result.results.leds[led]) {
+                        const data = result.results.leds[led][color];
+                        if (data.plot) {
+                            plotsHtml += `<div class="plot-tile"><img src="data:image/png;base64,${data.plot}" onclick="openModal(this.src)" /></div>`;
+                        } else {
+                            plotsHtml += '<div class="plot-tile empty"><i class="fa-solid fa-ban"></i></div>';
+                        }
+                    }
+                    plotsHtml += '</div>';
+                }
+                plotsHtml += '</div>';
+                outputDiv.innerHTML = `<p><strong>Overall Accuracy:</strong> ${result.results.overall_accuracy.toFixed(2)}%</p>${plotsHtml}`;
+            })
+            .catch(error => {
+                console.error("Error in compare-patterns-form:", error);
+                outputDiv.innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
+            });
+    });
+
+    document.getElementById('compare-from-log-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const patternIndex = form.querySelector('#compare-log-pattern').value;
+        const etalonDevice = form.querySelector('#compare-log-etalon-device').value;
+        const etalonPattern = form.querySelector('#compare-log-etalon-pattern').value;
+
+        const outputDiv = document.getElementById('compare-from-log-output');
+        outputDiv.innerHTML = 'Processing...';
+
+        fetch('/api/v1/tools/compare-log-pattern', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({
+                pattern_index: patternIndex,
+                etalon_device: etalonDevice,
+                etalon_pattern: etalonPattern
+            })
+        })
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => {
+                        throw new Error(text)
+                    });
+                }
+                return response.json();
+            })
+            .then(result => {
+                if (result.status === 'error') {
+                    throw new Error(result.message);
+                }
+                let plotsHtml = '<div class="plots-grid">';
+                for (const led in result.results.leds) {
+                    plotsHtml += '<div class="led-row">';
+                    for (const color in result.results.leds[led]) {
+                        const data = result.results.leds[led][color];
+                        if (data.plot) {
+                            plotsHtml += `<div class="plot-tile"><img src="data:image/png;base64,${data.plot}" onclick="openModal(this.src)" /></div>`;
+                        } else {
+                            plotsHtml += '<div class="plot-tile empty"><i class="fa-solid fa-ban"></i></div>';
+                        }
+                    }
+                    plotsHtml += '</div>';
+                }
+                plotsHtml += '</div>';
+                outputDiv.innerHTML = `<p><strong>Overall Accuracy:</strong> ${result.results.overall_accuracy.toFixed(2)}%</p>${plotsHtml}`;
+            })
+            .catch(error => {
+                console.error("Error in compare-from-log-form:", error);
+                outputDiv.innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
+            });
+    });
+
+    document.getElementById('generate-etalons-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const deviceName = form.querySelector('#generate-etalons-device-name').value;
+        const patternName = form.querySelector('#generate-etalons-pattern-name').value;
+
+        const outputDiv = document.getElementById('generate-etalons-output');
+        outputDiv.innerHTML = 'Processing...';
+
+        try {
+            const response = await fetch('/api/v1/tools/generate-etalons', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: new URLSearchParams({
+                    device_name: deviceName,
+                    pattern_name: patternName
+                })
+            });
+
+            const responseText = await response.text();
+            let result;
+            try {
+                const jsonStart = responseText.indexOf('{');
+                if (jsonStart === -1) throw new Error("Invalid response: Not JSON.");
+                const jsonString = responseText.substring(jsonStart);
+                result = JSON.parse(jsonString);
+            } catch (parseError) {
+                throw new Error(`Failed to parse server response. Raw response: ${responseText}`);
+            }
+
+            if (!response.ok) throw new Error(result.detail || 'Failed to generate etalons');
+
+            let plotsHtml = '<div class="plots-grid">';
+            for (const led in result.plots) {
+                plotsHtml += '<div class="led-row">';
+                for (const color in result.plots[led]) {
+                    plotsHtml += `<div class="plot-tile"><img src="data:image/png;base64,${result.plots[led][color]}" onclick="openModal(this.src)" /></div>`;
+                }
+                plotsHtml += '</div>';
+            }
+            plotsHtml += '</div>';
+            outputDiv.innerHTML = `<p><strong>Status:</strong> ${result.status}</p><p><strong>Message:</strong> ${result.message}</p>${plotsHtml}`;
+        } catch (error) {
+            outputDiv.innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
+        }
+    });
+
+    document.getElementById('source-type').addEventListener('change', (e) => {
+        const sourceType = e.target.value;
+        if (sourceType === 'log') {
+            document.getElementById('source-log-fields').style.display = 'block';
+            document.getElementById('source-db-fields').style.display = 'none';
+        } else {
+            document.getElementById('source-log-fields').style.display = 'none';
+            document.getElementById('source-db-fields').style.display = 'block';
+        }
+    });
+
+    document.getElementById('generate-from-parameters-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const formData = new FormData();
+
+        const mode = form.querySelector('#param-generation-mode').value;
+
+        formData.append('mode', 'instant');
+        formData.append('output_file', form.querySelector('#param-output-file').value);
+        formData.append('save_to_db', form.querySelector('#param-save-to-db').value);
+        formData.append('duration', form.querySelector('#param-duration').value);
+        formData.append('interval', form.querySelector('#param-interval').value);
+        formData.append('noise', form.querySelector('#param-noise').value);
+        formData.append('lag', form.querySelector('#param-lag').value);
+        formData.append('reporting_chance', form.querySelector('#param-reporting-chance').value);
+
+        if (mode === 'simple') {
+            formData.append('num_leds', form.querySelector('#param-num-leds').value);
+            formData.append('color', form.querySelector('#param-color').value);
+            formData.append('fade', form.querySelector('#param-fade').value);
+            formData.append('sequence', form.querySelector('#param-sequence').value);
+        } else {
+            formData.append('palette', form.querySelector('#param-palette').value);
+        }
+
+        const outputDiv = document.getElementById('generate-from-parameters-output');
+        outputDiv.innerHTML = 'Processing...';
+
+        try {
+            const response = await fetch('/api/v1/tools/generate-from-parameters', {
+                method: 'POST',
+                body: formData,
+            });
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('text/plain')) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = form.querySelector('#param-output-file').value || 'led_indication.log';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                outputDiv.innerHTML = `<p><strong>Status:</strong> success</p><p><strong>Message:</strong> File generated and downloaded successfully.</p>`;
+            } else {
+                const responseText = await response.text();
+                let result;
+                try {
+                    const jsonStart = responseText.indexOf('{');
+                    if (jsonStart === -1) throw new Error("Invalid response: Not JSON.");
+                    const jsonString = responseText.substring(jsonStart);
+                    result = JSON.parse(jsonString);
+                } catch (parseError) {
+                    throw new Error(`Failed to parse server response. Raw response: ${responseText}`);
+                }
+
+                if (!response.ok || result.status === 'error') {
+                    throw new Error(result.detail || result.message || 'Failed to generate file');
+                }
+                outputDiv.innerHTML = `<p><strong>Status:</strong> ${result.status}</p><p><strong>Message:</strong> ${result.message}</p>`;
+            }
+        } catch (error) {
+            outputDiv.innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
+        }
+    });
+
+    document.getElementById('generate-from-source-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target;
+        const formData = new FormData();
+        formData.append('mode', 'instant');
+        formData.append('source_type', form.querySelector('#source-type').value);
+        if (form.querySelector('#source-type').value === 'log') {
+            const fileInput = form.querySelector('#source-log-file');
+            if (fileInput.files.length > 0) {
+                formData.append('file', fileInput.files[0]);
+            }
+        } else {
+            formData.append('collection', form.querySelector('#source-db-collection').value);
+            formData.append('pattern_name', form.querySelector('#source-db-pattern-name').value);
+            formData.append('process_all', form.querySelector('#source-db-process-all').checked.toString());
+        }
+        formData.append('save_to_db', form.querySelector('#source-save-to-db').value);
+        formData.append('output_dir', form.querySelector('#source-output-dir').value);
+        formData.append('count', form.querySelector('#source-count').value);
+        formData.append('noise', form.querySelector('#source-noise').value);
+        formData.append('lag', form.querySelector('#source-lag').value);
+        formData.append('reporting_chance', form.querySelector('#source-reporting-chance').value);
+        formData.append('interval', form.querySelector('#source-interval').value);
+
+        const outputDiv = document.getElementById('generate-from-source-output');
+        outputDiv.innerHTML = 'Processing...';
+
+        try {
+            const response = await fetch('/api/v1/tools/generate-from-source', {
+                method: 'POST', body: formData,
+            });
+
+            const contentType = response.headers.get('content-type');
+
+            if (contentType && (contentType.includes('application/zip') || contentType.includes('text/plain'))) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = contentType.includes('application/zip') ? 'generated_logs.zip' : 'generated_from_source.log';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                outputDiv.innerHTML = `<p><strong>Status:</strong> success</p><p><strong>Message:</strong> File(s) generated and downloaded successfully.</p>`;
+            } else {
+                const responseText = await response.text();
+                let result;
+                try {
+                    const jsonStart = responseText.indexOf('{');
+                    if (jsonStart === -1) throw new Error("Invalid response: Not JSON.");
+                    const jsonString = responseText.substring(jsonStart);
+                    result = JSON.parse(jsonString);
+                } catch (parseError) {
+                    throw new Error(`Failed to parse server response. Raw response: ${responseText}`);
+                }
+
+                if (!response.ok || result.status === 'error') {
+                    throw new Error(result.detail || result.message || 'Failed to generate files');
+                }
+                outputDiv.innerHTML = `<p><strong>Status:</strong> ${result.status}</p><p><strong>Message:</strong> ${result.message}</p>`;
+            }
+        } catch (error) {
+            outputDiv.innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
+        }
+    });
+
+    const generationModeSelector = document.getElementById('param-generation-mode');
+    const simpleParamsContainer = document.getElementById('simple-params-container');
+    const paletteParamsContainer = document.getElementById('palette-params-container');
+    const paletteTextInput = document.getElementById('param-palette-text');
+    const hiddenPaletteInput = document.getElementById('param-palette');
+
+    generationModeSelector.addEventListener('change', (e) => {
+        if (e.target.value === 'simple') {
+            simpleParamsContainer.style.display = 'block';
+            paletteParamsContainer.style.display = 'none';
+            hiddenPaletteInput.value = '';
+        } else {
+            simpleParamsContainer.style.display = 'none';
+            paletteParamsContainer.style.display = 'block';
+        }
+    });
+
+    paletteTextInput.addEventListener('input', (e) => {
+        hiddenPaletteInput.value = e.target.value;
+    });
+}
 
 function setupPlayerControls() {
     const playerWrapper = document.getElementById('player-wrapper');
@@ -26,7 +606,7 @@ function setupPlayerControls() {
         setTimeout(updateLedPixelPositions, 50);
     });
 
-    resizeHandle.addEventListener('mousedown', function(e) {
+    resizeHandle.addEventListener('mousedown', function (e) {
         e.preventDefault();
         const startHeight = playerWrapper.offsetHeight;
         const startY = e.clientY;
@@ -79,39 +659,6 @@ function setupPlayerControls() {
     });
 }
 
-
-function setupEventListeners() {
-    document.getElementById("deviceSelector").addEventListener("change", handleDeviceSelection);
-    document.getElementById("etalonPatternSelector").addEventListener("change", selectEtalonPattern);
-    document.getElementById("measuredCollectionSelector").addEventListener("change", selectMeasuredPattern);
-    const dropZone = document.getElementById("dropZone");
-    const logFileInput = document.getElementById("logFileInput");
-    dropZone.addEventListener("click", () => logFileInput.click());
-    logFileInput.addEventListener("change", (e) => {
-        if (e.target.files.length) {
-            handleLogFileUpload(e.target.files[0]);
-        }
-    });
-    dropZone.addEventListener("dragover", (e) => {
-        e.preventDefault();
-        dropZone.classList.add("drop-zone--over");
-    });
-    ["dragleave", "dragend"].forEach((type) => {
-        dropZone.addEventListener(type, (e) => {
-            dropZone.classList.remove("drop-zone--over");
-        });
-    });
-    dropZone.addEventListener("drop", (e) => {
-        e.preventDefault();
-        if (e.dataTransfer.files.length) {
-            logFileInput.files = e.dataTransfer.files;
-            handleLogFileUpload(e.dataTransfer.files[0]);
-        }
-        dropZone.classList.remove("drop-zone--over");
-    });
-    document.getElementById("logPatternSelector").addEventListener("change", selectLogPattern);
-}
-
 async function handleLogFileUpload(file) {
     const logPatternSelector = document.getElementById("logPatternSelector");
     logPatternSelector.innerHTML = '<option value="">Parsing log file...</option>';
@@ -120,12 +667,11 @@ async function handleLogFileUpload(file) {
     formData.append("file", file);
     try {
         const response = await fetch('/api/v1/parser/upload-log', {
-            method: 'POST',
-            body: formData,
+            method: 'POST', body: formData,
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.detail || "Failed to parse file");
-        populateLogPatternSelector(result);
+        populateLogPatternSelector(result, "logPatternSelector");
         updateStatus(`Log parsed. Found ${result.length} patterns.`, 'connected');
     } catch (error) {
         logPatternSelector.innerHTML = '<option value="">Parsing failed!</option>';
@@ -133,8 +679,8 @@ async function handleLogFileUpload(file) {
     }
 }
 
-function populateLogPatternSelector(patterns) {
-    const logPatternSelector = document.getElementById("logPatternSelector");
+function populateLogPatternSelector(patterns, selectorId) {
+    const logPatternSelector = document.getElementById(selectorId);
     logPatternSelector.innerHTML = '<option value="">Select a pattern from log...</option>';
     patterns.forEach(pattern => {
         const text = `Pattern #${pattern.index + 1} (${pattern.duration.toFixed(2)}s)`;
@@ -244,11 +790,27 @@ async function loadDevices() {
         const response = await fetch("/api/v1/devices/");
         if (!response.ok) throw new Error(`HTTP error ${response.status}`);
         devicesData = await response.json();
+
         const deviceSelector = document.getElementById("deviceSelector");
+        const compareMeasuredSelector = document.getElementById("compare-measured-collection");
+
         deviceSelector.innerHTML = '<option value="">Select a device...</option>';
+        compareMeasuredSelector.innerHTML = '<option value="">Select a collection...</option>';
+
+        let allMeasuredCollections = [];
         for (const deviceName in devicesData) {
             deviceSelector.add(new Option(deviceName, deviceName));
+            if (devicesData[deviceName].measured_collections) {
+                devicesData[deviceName].measured_collections.forEach(collection => {
+                    allMeasuredCollections.push(collection);
+                });
+            }
         }
+
+        allMeasuredCollections.sort().forEach(collection => {
+            compareMeasuredSelector.add(new Option(collection, collection));
+        });
+
     } catch (error) {
         updateStatus("Failed to load devices", "disconnected");
     }
@@ -260,9 +822,7 @@ function handleDeviceSelection() {
     const measuredSelector = document.getElementById("measuredCollectionSelector");
     etalonSelector.innerHTML = '<option value="">Select etalon...</option>';
     measuredSelector.innerHTML = '<option value="">Select measured...</option>';
-    [etalonSelector, measuredSelector].forEach(
-        (el) => (el.disabled = true)
-    );
+    [etalonSelector, measuredSelector].forEach((el) => (el.disabled = true));
     if (deviceName && devicesData[deviceName]) {
         const device = devicesData[deviceName];
         if (device.measured_collections?.length > 0) {
@@ -307,9 +867,7 @@ async function selectMeasuredPattern() {
 async function loadPattern(url, body) {
     try {
         const response = await fetch(url, {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify(body),
+            method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body),
         });
         const result = await response.json();
         if (!response.ok) throw new Error(result.detail || "Failed to load pattern");

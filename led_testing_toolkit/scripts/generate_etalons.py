@@ -28,20 +28,30 @@ async def _get_collections(device_name: str | None = None, pattern_name: str | N
     return collection_names
 
 
-async def _generate_etalons(collection_names: list[str]) -> None:
+async def _generate_etalons(collection_names: list[str]) -> tuple[list[str], dict[str, dict[str, str]]]:
     if not collection_names:
         logger.warning("Collection names list is empty! Nothing to generate.")
-        return
+        return [], {}
 
+    generated_etalons = []
+    plots = {}
     for measure_collection_name in collection_names:
         try:
             _, suffix = parse_collection_name(measure_collection_name)
             if suffix != ETALONS_COLLECTION_SUFFIX:
                 logger.debug(f"Generating etalon based on data from {measure_collection_name} collection...")
-                etalon_collection_name = await generate_etalon(measure_collection_name)
+                etalon_collection_name, etalon_plots = await generate_etalon(measure_collection_name)
                 logger.success(f"Etalon stored in {etalon_collection_name} collection successfully!")
+                generated_etalons.append(etalon_collection_name)
+                plots.update(etalon_plots)
         except Exception as e:
             logger.error(f"`{measure_collection_name}` skipped! Reason: {e!s}")
+    return generated_etalons, plots
+
+
+async def generate_etalons_main(device_name: str, pattern_name: str) -> tuple[list[str], dict[str, dict[str, str]]]:
+    collections = await _get_collections(device_name, pattern_name)
+    return await _generate_etalons(collections)
 
 
 async def main() -> None:
@@ -58,8 +68,7 @@ async def main() -> None:
     )
     cli_args = parser.parse_args()
 
-    collections = await _get_collections(cli_args.device_name, cli_args.pattern_name)
-    await _generate_etalons(collections)
+    await generate_etalons_main(cli_args.device_name, cli_args.pattern_name)
 
 
 if __name__ == "__main__":

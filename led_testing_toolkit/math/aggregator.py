@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import base64
+import io
 from itertools import cycle
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -123,6 +125,34 @@ class Aggregator:
     async def start(self) -> None:
         await self._interpolate()
         await self._aggregate()
+
+    def get_plots_base64(self, **kwargs) -> str:
+        if not self.etalon.coordinates:
+            raise ValueError("Etalon is not available! Run start() method first.")
+
+        fig, ax = plt.subplots(1, 1, figsize=kwargs.get("figsize", (12, 6)))
+        fig.suptitle(kwargs.get("title", "Aggregated data"), fontsize=16)
+
+        colors = self.get_plot_colors()
+        for x, y in self._interpolated:
+            ax.plot(x, y, color=next(colors), alpha=0.5, linewidth=1)
+
+        x_etalon = [p.x for p in self.etalon.coordinates]
+        y_etalon = [p.y for p in self.etalon.coordinates]
+
+        ax.plot(x_etalon, y_etalon, color="black", linewidth=2, label="Etalon")
+        ax.set_title("Time domain")
+        ax.set_xlabel(kwargs.get("xlabel", "Time (s)"))
+        ax.set_ylabel(kwargs.get("ylabel", "Color (0-255)"))
+        ax.legend(loc="upper right")
+        ax.grid(True)
+
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+        buf = io.BytesIO()
+        plt.savefig(buf, format="png")
+        plt.close(fig)
+        return base64.b64encode(buf.getvalue()).decode("utf-8")
 
     def build_plots(self, **kwargs) -> Path:
         plt.figure(figsize=(10, 6))

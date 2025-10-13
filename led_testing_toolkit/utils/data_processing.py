@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import os
 import random
-import uuid
 from collections.abc import Sequence
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import matplotlib as mpl
 import numpy as np
+from bson import ObjectId
 from loguru import logger
 
 from led_testing_toolkit.math.aggregator import Aggregator
@@ -116,15 +115,19 @@ async def read_measured(
     *,
     db_name: str | None = os.getenv("MONGO_DB_NAME"),
     get_random: bool = False,
+    record_id: str | None = None,
 ) -> NormalizedLedData:
     measure_collection_name = validate_measured_collection_name(name)
 
     async with MongoDbConnector(db_name) as connector:
         await connector.use_collection(measure_collection_name, auto_create=False)
-        raw_dataset = await connector.read({}, projection={"_id": 0}, find_many=True)
-
-    if get_random:
-        raw_dataset = random.choice(raw_dataset)
+        if get_random:
+            raw_dataset = await connector.read({}, projection={"_id": 0}, find_many=True)
+            raw_dataset = random.choice(raw_dataset)
+        elif record_id:
+            raw_dataset = await connector.read({"_id": ObjectId(record_id)}, projection={"_id": 0})
+        else:
+            raw_dataset = await connector.read({}, projection={"_id": 0}, find_many=True)
 
     return await extract_led_rgb_data(raw_dataset)
 
@@ -150,24 +153,20 @@ async def generate_etalon(
     measure_collection_name: str,
     *,
     db_name: str | None = os.getenv("MONGO_DB_NAME"),
-    plot_dir_path: Path | str = Path(),
-) -> str:
-    plot_dir_path = Path(plot_dir_path)
-    if not plot_dir_path.is_dir():
-        raise ValueError(f"`{plot_dir_path}` is not a valid directory path!")
-
+) -> tuple[str, dict[str, dict[str, str]]]:
     device_name, etalon_record_key = parse_collection_name(measure_collection_name)
     etalon_collection_name = validate_etalons_collection_name(f"{device_name}-{ETALONS_COLLECTION_SUFFIX}")
 
     normalized_dataset = await read_measured(measure_collection_name, db_name=db_name)
+    plots = {}
     async with MongoDbConnector(db_name) as connector:
         await connector.use_collection(etalon_collection_name, auto_create=True)
 
         etalons_data, abs_avg_times = {}, {}
-        base_plot_path = Path(plot_dir_path, etalon_record_key.lower(), "aggregated", str(uuid.uuid4()))
         interpolator = Interpolator(lower_bound=0, upper_bound=255)
         for led, rgb_dataset in normalized_dataset.items():
             etalons_data[led] = {}
+            plots[led] = {}
             abs_avg_times[led] = compute_average_abs_times(rgb_dataset["r"])
             tasks = [
                 (color, Aggregator(dataset=Dataset(records=data), interpolator=interpolator))
@@ -175,15 +174,14 @@ async def generate_etalon(
             ]
             for color, aggregator in tasks:
                 await aggregator.start()
-                aggregator.build_plots(
+                plots[led][color] = aggregator.get_plots_base64(
                     title=f"{led.upper()} ({color.upper()} channel) - aggregated data",
-                    save_path=base_plot_path / led.lower() / color.lower(),
                 )
                 etalons_data[led][color] = aggregator.etalon
 
         etalon_dict = convert_etalon_to_db_format(etalons_data, abs_avg_times)
         await connector.upsert(query={"_id": etalon_record_key}, update_data=etalon_dict)
-    return etalon_collection_name
+    return etalon_collection_name, plots
 
 
 async def make_comparison(
@@ -192,38 +190,32 @@ async def make_comparison(
     *,
     led: str,
     color: str,
-    plot_path: Path | str,
-) -> float:
+) -> tuple[float, str]:
     comparator = Comparator(etalon, measured, Interpolator(lower_bound=0, upper_bound=255))
     accuracy = await comparator.start()
-    comparator.build_plots(
+    plot = comparator.build_plots(
         title=f"{led.upper()} ({color.upper()} channel) - comparison (similarity: {accuracy:.2f}%)",
-        save_path=plot_path,
         xlabel="Time (s)",
         ylabel="Color (0-255)",
     )
-    return accuracy
+    return accuracy, plot
 
 
 async def make_comparisons(
     normalized_etalon_data: NormalizedLedData,
     normalized_measured_data: NormalizedLedData,
-    plot_dir_path: Path | str = Path(),
 ) -> ComparisonResults:
     comparison_results = {}
-    base_plot_path = Path(plot_dir_path, "comparison", str(uuid.uuid4()))
     for led, rgb_data in normalized_etalon_data.items():
         comparison_results[led] = {}
         for color, etalon in rgb_data.items():
-            plot_path = base_plot_path / led.lower() / color.lower()
-            accuracy = await make_comparison(
+            accuracy, plot = await make_comparison(
                 etalon[0],
                 normalized_measured_data[led][color][0],
                 led=led,
                 color=color,
-                plot_path=plot_path,
             )
-            comparison_results[led][color] = {"plot_path": plot_path, "accuracy": accuracy}
+            comparison_results[led][color] = {"plot": plot, "accuracy": accuracy}
 
     return comparison_results
 

@@ -209,7 +209,7 @@ class SimulationRunner:
                 patterns_to_process.extend([self._convert_db_doc_to_normalized_data(doc) for doc in docs_to_process])
         return patterns_to_process
 
-    async def run(self) -> None:
+    async def run(self) -> list[str]:
         base_name = ""
         if self.args.source_type == "log":
             base_name = self.args.filepath.stem
@@ -221,16 +221,9 @@ class SimulationRunner:
 
         if not patterns_to_process:
             self.logger.error("No source patterns found to process. Exiting.")
-            return
+            return []
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_filename = f"{self.args.source_type}_{base_name}_{timestamp}.log"
-        output_path = self.args.output_dir / output_filename
-
-        sim_logger = configure_logger(str(output_path), "LedGenerator")
-        if not self.args.save_to_db:
-            self.logger.debug(f"Simulations will be written to file: {output_path}")
-
+        output_files = []
         total_generations = 0
         for i, pattern_data in enumerate(patterns_to_process):
             pattern_num = i + 1
@@ -259,6 +252,15 @@ class SimulationRunner:
                     f"--- Generating Simulation {j}/{self.args.count} for Source Pattern #{pattern_num} ---",
                 )
 
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                output_filename = f"{self.args.source_type}_{base_name}_{timestamp}_{i}_{j}.log"
+                output_path = self.args.output_dir / output_filename
+                output_files.append(str(output_path))
+
+                sim_logger = configure_logger(str(output_path), "LedGenerator")
+                if not self.args.save_to_db:
+                    self.logger.debug(f"Simulations will be written to file: {output_path}")
+
                 config_dict: dict[str, Any] = {
                     "duration": duration,
                     "output_file": str(output_path),
@@ -286,3 +288,4 @@ class SimulationRunner:
                 await generator.run()
 
         self.logger.success(f"Completed. Generated {total_generations} total simulations.")
+        return output_files

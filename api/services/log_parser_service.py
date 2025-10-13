@@ -5,7 +5,6 @@ import tempfile
 from pathlib import Path
 
 from led_testing_toolkit.led_parser import LedParser
-from led_testing_toolkit.utils.data_processing import convert_normalized_to_raw_format
 
 
 class LogParserService:
@@ -36,8 +35,7 @@ class LogParserService:
 
     def get_pattern_by_index(self, index: int) -> dict | None:
         if 0 <= index < len(self.last_parsed_patterns):
-            normalized_pattern = self.last_parsed_patterns[index]
-            return convert_normalized_to_raw_format(normalized_pattern)
+            return self.last_parsed_patterns[index]
         return None
 
     @staticmethod
