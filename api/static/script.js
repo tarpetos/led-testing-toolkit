@@ -104,12 +104,38 @@ function openModal(src) {
     modalImg.src = src;
 }
 
+function showProcessingAnimation(outputDiv, form) {
+    const submitButton = form.querySelector('button[type="submit"]');
+    if (submitButton) {
+        submitButton.disabled = true;
+    }
+    outputDiv.innerHTML = `
+        <div class="processing-animation">
+            <div class="spinner"></div>
+            <p>Processing request...</p>
+        </div>`;
+}
+
+function hideProcessingAnimation(form) {
+    const submitButton = form.querySelector('button[type="submit"]');
+    if (submitButton) {
+        submitButton.disabled = false;
+    }
+}
+
 window.onload = () => {
     const modal = document.getElementById("plot-modal");
     const span = document.getElementsByClassName("close")[0];
     span.onclick = function () {
         modal.style.display = "none";
     }
+
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            modal.style.display = "none";
+        }
+    });
+
     setupDropZone("split-drop-zone", "split-input-files", "split-file-list", true);
     setupDropZone("source-drop-zone", "source-log-file", "source-file-list", false);
     setupDropZone("compare-log-drop-zone", "compare-log-file", "compare-log-file-list", false, (files) => {
@@ -240,7 +266,7 @@ function setupEventListeners() {
         formData.append('end_pattern', form.querySelector('#split-end-pattern').value);
 
         const outputDiv = document.getElementById('split-logs-output');
-        outputDiv.innerHTML = 'Processing...';
+        showProcessingAnimation(outputDiv, form);
 
         try {
             const response = await fetch('/api/v1/tools/split-logs', {
@@ -266,6 +292,8 @@ function setupEventListeners() {
             }
         } catch (error) {
             outputDiv.innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
+        } finally {
+            hideProcessingAnimation(form);
         }
     });
 
@@ -278,7 +306,7 @@ function setupEventListeners() {
         const etalonPattern = form.querySelector('#compare-etalon-pattern').value;
 
         const outputDiv = document.getElementById('compare-patterns-output');
-        outputDiv.innerHTML = 'Processing...';
+        showProcessingAnimation(outputDiv, form);
 
         fetch('/api/v1/tools/compare-patterns', {
             method: 'POST', headers: {
@@ -321,6 +349,9 @@ function setupEventListeners() {
             .catch(error => {
                 console.error("Error in compare-patterns-form:", error);
                 outputDiv.innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
+            })
+            .finally(() => {
+                hideProcessingAnimation(form);
             });
     });
 
@@ -332,7 +363,7 @@ function setupEventListeners() {
         const etalonPattern = form.querySelector('#compare-log-etalon-pattern').value;
 
         const outputDiv = document.getElementById('compare-from-log-output');
-        outputDiv.innerHTML = 'Processing...';
+        showProcessingAnimation(outputDiv, form);
 
         fetch('/api/v1/tools/compare-log-pattern', {
             method: 'POST',
@@ -376,6 +407,9 @@ function setupEventListeners() {
             .catch(error => {
                 console.error("Error in compare-from-log-form:", error);
                 outputDiv.innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
+            })
+            .finally(() => {
+                hideProcessingAnimation(form);
             });
     });
 
@@ -386,7 +420,7 @@ function setupEventListeners() {
         const patternName = form.querySelector('#generate-etalons-pattern-name').value;
 
         const outputDiv = document.getElementById('generate-etalons-output');
-        outputDiv.innerHTML = 'Processing...';
+        showProcessingAnimation(outputDiv, form);
 
         try {
             const response = await fetch('/api/v1/tools/generate-etalons', {
@@ -425,6 +459,8 @@ function setupEventListeners() {
             outputDiv.innerHTML = `<p><strong>Status:</strong> ${result.status}</p><p><strong>Message:</strong> ${result.message}</p>${plotsHtml}`;
         } catch (error) {
             outputDiv.innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
+        } finally {
+            hideProcessingAnimation(form);
         }
     });
 
@@ -465,7 +501,7 @@ function setupEventListeners() {
         }
 
         const outputDiv = document.getElementById('generate-from-parameters-output');
-        outputDiv.innerHTML = 'Processing...';
+        showProcessingAnimation(outputDiv, form);
 
         try {
             const response = await fetch('/api/v1/tools/generate-from-parameters', {
@@ -503,6 +539,8 @@ function setupEventListeners() {
             }
         } catch (error) {
             outputDiv.innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
+        } finally {
+            hideProcessingAnimation(form);
         }
     });
 
@@ -531,7 +569,7 @@ function setupEventListeners() {
         formData.append('interval', form.querySelector('#source-interval').value);
 
         const outputDiv = document.getElementById('generate-from-source-output');
-        outputDiv.innerHTML = 'Processing...';
+        showProcessingAnimation(outputDiv, form);
 
         try {
             const response = await fetch('/api/v1/tools/generate-from-source', {
@@ -570,6 +608,8 @@ function setupEventListeners() {
             }
         } catch (error) {
             outputDiv.innerHTML = `<p><strong>Error:</strong> ${error.message}</p>`;
+        } finally {
+            hideProcessingAnimation(form);
         }
     });
 

@@ -555,9 +555,15 @@ body.is-resizing #ledContainer {
     background-color: var(--accent-hover);
 }
 
+.btn:disabled {
+    background-color: var(--border-hover);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
 .plots-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    grid-template-columns: repeat(1, 1fr);
     gap: 20px;
 }
 
@@ -663,4 +669,16 @@ body.is-resizing #ledContainer {
     color: #bbb;
     text-decoration: none;
     cursor: pointer;
+}
+
+.processing-animation {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 40px 20px;
+    gap: 15px;
+    min-height: 150px;
+    color: var(--secondary-text);
+    text-align: center;
 }
