@@ -128,7 +128,7 @@ class Aggregator:
 
     def get_plots_base64(self, **kwargs) -> str:
         if not self.etalon.coordinates:
-            raise ValueError("Etalon is not available! Run start() method first.")
+            raise ValueError("Etalon is not available! Run start() method first!")
 
         fig, ax = plt.subplots(1, 1, figsize=kwargs.get("figsize", (12, 6)))
         fig.suptitle(kwargs.get("title", "Aggregated data"), fontsize=16)

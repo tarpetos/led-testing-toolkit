@@ -159,13 +159,8 @@ class LedGenerator:
             self.logger.warning("No data was generated to save to the database.")
             return
 
-        try:
-            collection_name = validate_measured_collection_name(self.save_to_db_collection)
-        except (ValueError, AssertionError) as e:
-            self.logger.error(f"Invalid DB collection name '{self.save_to_db_collection}': {e!s}")
-            return
-
-        self.logger.debug(f"Saving generated data to MongoDB collection: '{collection_name}'...")
+        collection_name = validate_measured_collection_name(self.save_to_db_collection)
+        self.logger.debug(f"Saving generated data to MongoDB collection: `{collection_name}`...")
         try:
             async with MongoDbConnector() as connector:
                 await connector.use_collection(collection_name, auto_create=True)

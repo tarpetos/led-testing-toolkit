@@ -171,7 +171,7 @@ class SimulationRunner:
 
         if is_etalon_source and not self.args.pattern_name:
             self.logger.error(
-                f"Argument '-n/--pattern_name' is required for an etalon collection ('{self.args.collection}').",
+                f"Argument '-n/--pattern_name' is required for an etalon collection (`{self.args.collection}`).",
             )
             sys.exit(1)
 
@@ -179,22 +179,22 @@ class SimulationRunner:
         async with MongoDbConnector() as connector:
             if db_type == "etalon":
                 self.logger.debug(
-                    f"Loading etalon '{self.args.pattern_name}' from collection '{self.args.collection}'...",
+                    f"Loading etalon `{self.args.pattern_name}` from collection `{self.args.collection}`...",
                 )
                 await connector.use_collection(self.args.collection, auto_create=False)
                 doc = await connector.read({"_id": self.args.pattern_name.upper()})
                 if not doc:
                     self.logger.error(
-                        f"Etalon '{self.args.pattern_name.upper()}' not found in collection '{self.args.collection}'.",
+                        f"Etalon `{self.args.pattern_name.upper()}` not found in collection `{self.args.collection}`.",
                     )
                     sys.exit(1)
                 patterns_to_process.append(self._convert_db_doc_to_normalized_data(doc))
             elif db_type == "measured":
-                self.logger.debug(f"Loading records from measured collection '{self.args.collection}'...")
+                self.logger.debug(f"Loading records from measured collection `{self.args.collection}`...")
                 await connector.use_collection(self.args.collection, auto_create=False)
                 all_docs = await connector.read({}, find_many=True)
                 if not all_docs:
-                    self.logger.error(f"Collection '{self.args.collection}' is empty or does not exist.")
+                    self.logger.error(f"Collection `{self.args.collection}` is empty or does not exist.")
                     sys.exit(1)
 
                 if self.args.process_all:

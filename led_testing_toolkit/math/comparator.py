@@ -171,7 +171,7 @@ class Comparator:
             return ""
 
         if not self._aligned_data:
-            raise ValueError("Aligned data is not available! Run start() method first.")
+            raise ValueError("Aligned data is not available! Run start() method first!")
 
         etalon_x = np.array([point.x for point in self._aligned_data["etalon"].coordinates])
         etalon_y = np.array([point.y for point in self._aligned_data["etalon"].coordinates])

@@ -105,7 +105,7 @@ class LedParser:
 
                 parts = line.split(" ", 2)
                 if len(parts) != log_line_length:
-                    self._logger.warning(f"Malformed log line skipped: {line}")
+                    self._logger.warning(f"Malformed log line skipped: `{line}`")
                     continue
 
                 timestamp_str = parts[0]

@@ -316,7 +316,7 @@ function setupEventListeners() {
                     plotsHtml += '</div>';
                 }
                 plotsHtml += '</div>';
-                outputDiv.innerHTML = `<p><strong>Overall Accuracy:</strong> ${result.results.overall_accuracy.toFixed(2)}%</p>${plotsHtml}`;
+                outputDiv.innerHTML = `<p><strong>Overall accuracy:</strong> ${result.results.overall_accuracy.toFixed(2)}%</p>${plotsHtml}`;
             })
             .catch(error => {
                 console.error("Error in compare-patterns-form:", error);
@@ -371,7 +371,7 @@ function setupEventListeners() {
                     plotsHtml += '</div>';
                 }
                 plotsHtml += '</div>';
-                outputDiv.innerHTML = `<p><strong>Overall Accuracy:</strong> ${result.results.overall_accuracy.toFixed(2)}%</p>${plotsHtml}`;
+                outputDiv.innerHTML = `<p><strong>Overall accuracy:</strong> ${result.results.overall_accuracy.toFixed(2)}%</p>${plotsHtml}`;
             })
             .catch(error => {
                 console.error("Error in compare-from-log-form:", error);

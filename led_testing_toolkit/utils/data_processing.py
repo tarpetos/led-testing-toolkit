@@ -276,7 +276,7 @@ async def save_patterns_to_db(
         logger.warning("No parsed patterns to save to the database.")
         return
 
-    logger.info(f"Preparing to save {len(parsed_patterns)} patterns to collection '{collection_name}'.")
+    logger.info(f"Preparing to save {len(parsed_patterns)} patterns to collection `{collection_name}`.")
 
     raw_patterns = [convert_normalized_to_raw_format(p) for p in parsed_patterns]
 
@@ -286,7 +286,7 @@ async def save_patterns_to_db(
             result = await connector.insert(raw_patterns, insert_many=True)
             if result:
                 logger.success(
-                    f"Successfully inserted {len(result.inserted_ids)} documents into '{collection_name}'.",
+                    f"Successfully inserted {len(result.inserted_ids)} documents into `{collection_name}`.",
                 )
     except Exception:
-        logger.exception(f"Failed to save patterns to collection '{collection_name}'.")
+        logger.exception(f"Failed to save patterns to collection `{collection_name}`.")

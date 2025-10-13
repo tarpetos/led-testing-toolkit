@@ -27,7 +27,7 @@ async def get_etalon_patterns(device_name: str) -> list[str]:
     if not device_data or not device_data.get("etalon_collection"):
         raise HTTPException(
             status_code=404,
-            detail="Etalon collection for device not found",
+            detail="Etalon collection for device not found!",
         )
 
     return await device_service.get_etalon_patterns(device_data["etalon_collection"])
@@ -41,7 +41,7 @@ async def select_etalon(device_name: str, request: SelectEtalonRequest) -> Messa
         if not device_data or not device_data.get("etalon_collection"):
             raise HTTPException(  # noqa:  TRY301
                 status_code=404,
-                detail="Device or etalon collection not found",
+                detail="Device or etalon collection not found!",
             )
 
         await player_service.load_etalon_pattern(device_data["etalon_collection"], request.pattern_name)
@@ -50,7 +50,7 @@ async def select_etalon(device_name: str, request: SelectEtalonRequest) -> Messa
         raise HTTPException(status_code=500, detail=f"Server error: {tb_str}") from e
 
     return MessageResponse(
-        message=f"Etalon '{request.pattern_name}' loaded successfully",
+        message=f"Etalon `{request.pattern_name}` loaded successfully",
     )
 
 
@@ -68,5 +68,5 @@ async def select_measured(device_name: str, request: SelectMeasuredRequest) -> M
         raise HTTPException(status_code=500, detail=f"Server error: {tb_str}") from e
 
     return MessageResponse(
-        message=f"Random record from '{request.collection_name}' loaded successfully",
+        message=f"Random record from `{request.collection_name}` loaded successfully",
     )

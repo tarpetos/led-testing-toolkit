@@ -182,11 +182,11 @@
                     <form id="generate-etalons-form">
                         <div class="control-group">
                             <label for="generate-etalons-device-name">Device name</label>
-                            <input type="text" id="generate-etalons-device-name">
+                            <input type="text" id="generate-etalons-device-name" required>
                         </div>
                         <div class="control-group">
                             <label for="generate-etalons-pattern-name">Pattern name</label>
-                            <input type="text" id="generate-etalons-pattern-name">
+                            <input type="text" id="generate-etalons-pattern-name" required>
                         </div>
                         <button type="submit" class="btn">Generate</button>
                     </form>
@@ -399,7 +399,7 @@
         </div>
     </div>
 </div>
-<script src="../static/script.js?v=2"></script>
+<script src="../static/script.js"></script>
 <div id="plot-modal" class="modal">
     <span class="close">&times;</span>
     <img class="modal-content" id="modal-plot-img">

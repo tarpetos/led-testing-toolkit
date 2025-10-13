@@ -110,11 +110,15 @@ class ToolsService:
         try:
             log_capture_buffer = io.StringIO()
             with contextlib.redirect_stdout(log_capture_buffer):
-                generated_etalons, plots = await generate_etalons_main(device_name, pattern_name)
+                generated_etalons, plots = await generate_etalons_main(device_name, pattern_name, True)
         except Exception as e:
             return {"status": "error", "message": str(e)}
         else:
-            return {"status": "success", "message": f"Generated etalons: {generated_etalons}", "plots": plots}
+            return {
+                "status": "success",
+                "message": f"Pattern `{pattern_name.upper()}` stored in `{generated_etalons[0]}`",
+                "plots": plots,
+            }
 
     async def generate_from_parameters(self, **kwargs) -> dict[str, str] | FileResponse | StreamingResponse:
         temp_palette_file_path = None

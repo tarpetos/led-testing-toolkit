@@ -11,9 +11,20 @@ from led_testing_toolkit.utils.collection_name import (
 from led_testing_toolkit.utils.data_processing import generate_etalon
 
 
-async def _get_collections(device_name: str | None = None, pattern_name: str | None = None) -> list[str]:
+async def _get_collections(
+    device_name: str | None = None,
+    pattern_name: str | None = None,
+    *,
+    force_specific_collection: bool = False,
+) -> list[str]:
     async with MongoDbConnector() as connector:
         collection_names = await connector.list_collections()
+
+    if force_specific_collection:
+        device_name = device_name or ""
+        pattern_name = pattern_name or ""
+        if (collection_name := f"{device_name.upper()}-{pattern_name.upper()}") not in collection_names:
+            raise ValueError(f"Collection `{collection_name}` not found!")
 
     device_name_filter, pattern_name_filter = set(), set()
     for name in collection_names:
@@ -49,8 +60,12 @@ async def _generate_etalons(collection_names: list[str]) -> tuple[list[str], dic
     return generated_etalons, plots
 
 
-async def generate_etalons_main(device_name: str, pattern_name: str) -> tuple[list[str], dict[str, dict[str, str]]]:
-    collections = await _get_collections(device_name, pattern_name)
+async def generate_etalons_main(
+    device_name: str,
+    pattern_name: str,
+    force_specific_collection: bool,
+) -> tuple[list[str], dict[str, dict[str, str]]]:
+    collections = await _get_collections(device_name, pattern_name, force_specific_collection=force_specific_collection)
     return await _generate_etalons(collections)
 
 
@@ -68,7 +83,7 @@ async def main() -> None:
     )
     cli_args = parser.parse_args()
 
-    await generate_etalons_main(cli_args.device_name, cli_args.pattern_name)
+    await generate_etalons_main(cli_args.device_name, cli_args.pattern_name, False)
 
 
 if __name__ == "__main__":

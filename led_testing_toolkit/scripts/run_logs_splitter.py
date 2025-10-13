@@ -10,7 +10,7 @@ from led_testing_toolkit.utils.logs_splitter import LogsSplitter
 async def split_logs_main(
     input_files: list[Path], max_patterns: int, output_dir: Path, start_pattern: str, end_pattern: str
 ) -> list[Path]:
-    logger.info(f"Log splitter configured. Processing {len(input_files)} file(s).")
+    logger.info(f"Log splitter configured. Processing `{len(input_files)}` file(s).")
 
     try:
         splitter = LogsSplitter(
@@ -22,10 +22,10 @@ async def split_logs_main(
 
         processed_files = await splitter.process_batch(input_files)
     except ValueError as e:
-        logger.critical(f"Configuration error: {e}")
+        logger.critical(f"Configuration error: {e!s}")
         raise
     except Exception:
-        logger.exception("A critical error occurred during batch processing.")
+        logger.exception("A critical error occurred during batch processing!")
         raise
 
     logger.success("Batch processing complete.")

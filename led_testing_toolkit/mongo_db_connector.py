@@ -114,7 +114,7 @@ class MongoDbConnector:
             if auto_create:
                 await self.create(collection_name)
             else:
-                raise ValueError(f"Collection {collection_name} does not exist!")
+                raise ValueError(f"Collection `{collection_name}` does not exist!")
 
         self.collection = self.db[collection_name]
 
@@ -154,7 +154,7 @@ class MongoDbConnector:
 
         """
         if self.collection is None:
-            raise ValueError("No collection selected! Call `use_collection` first.")
+            raise ValueError("No collection selected! Call `use_collection` first!")
 
         if find_many:
             return [item async for item in self.collection.find(query, projection)]
@@ -173,7 +173,7 @@ class MongoDbConnector:
 
         """
         if self.collection is None:
-            raise ValueError("No collection selected! Call `use_collection` first.")
+            raise ValueError("No collection selected! Call `use_collection` first!")
 
         pipeline = [{"$sample": {"size": 1}}]
         async for doc in await self.collection.aggregate(pipeline):
@@ -191,7 +191,7 @@ class MongoDbConnector:
 
         """
         if self.collection is None:
-            raise ValueError("No collection selected! Call `use_collection` first.")
+            raise ValueError("No collection selected! Call `use_collection` first!")
 
         return await self.collection.distinct(field)
 
@@ -208,7 +208,7 @@ class MongoDbConnector:
 
         """
         if self.collection is None:
-            raise ValueError("No collection selected! Call `use_collection` first.")
+            raise ValueError("No collection selected! Call `use_collection` first!")
 
         return await self.collection.update_one(query, {"$set": new_data})
 
@@ -225,7 +225,7 @@ class MongoDbConnector:
 
         """
         if self.collection is None:
-            raise ValueError("No collection selected! Call `use_collection` first.")
+            raise ValueError("No collection selected! Call `use_collection` first!")
 
         if del_many:
             return await self.collection.delete_many(query)
@@ -248,7 +248,7 @@ class MongoDbConnector:
 
         """
         if self.collection is None:
-            raise ValueError("No collection selected! Call `use_collection` first.")
+            raise ValueError("No collection selected! Call `use_collection` first!")
 
         try:
             if insert_many and isinstance(query, list):
@@ -294,7 +294,7 @@ class MongoDbConnector:
 
         """
         if self.collection is None:
-            raise ValueError("No collection selected! Call `use_collection` first.")
+            raise ValueError("No collection selected! Call `use_collection` first!")
 
         if many and isinstance(query, list):
             filter_query = {"$or": query}

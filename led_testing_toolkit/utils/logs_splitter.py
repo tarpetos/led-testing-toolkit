@@ -17,7 +17,7 @@ class LogsSplitter:
         end_pattern: str,
     ) -> None:
         if max_patterns_per_file <= 0:
-            raise ValueError("Max patterns per file must be a positive number.")
+            raise ValueError("Max patterns per file must be a positive number!")
 
         self.output_dir = output_dir
         self.max_patterns_per_file = max_patterns_per_file
@@ -34,7 +34,7 @@ class LogsSplitter:
                     sha256.update(chunk)
             return sha256.hexdigest()
         except OSError as e:
-            logger.error(f"Could not read file {file_path} for hashing: {e}")
+            logger.error(f"Could not read file `{file_path}` for hashing: {e!s}")
             return "hash_error"
 
     async def _find_patterns(self, content: str) -> list[str]:
@@ -71,12 +71,12 @@ class LogsSplitter:
         try:
             async with aiofiles.open(output_path, "w", encoding="utf-8") as f:
                 await f.write(content_to_write)
-            logger.success(f"Wrote {len(pattern_chunk)} patterns to {output_path}")
+            logger.success(f"Wrote `{len(pattern_chunk)}` patterns to `{output_path}`")
         except OSError as e:
-            logger.error(f"Error writing to file {output_path}: {e}")
+            logger.error(f"Error writing to file `{output_path}`: {e!s}")
 
     async def _process_single_file(self, input_file: Path) -> list[Path]:
-        logger.info(f"Starting processing for: '{input_file}'")
+        logger.info(f"Starting processing for: `{input_file}`")
 
         file_hash = await self._calculate_file_hash(input_file)
         if "error" in file_hash:
@@ -92,15 +92,15 @@ class LogsSplitter:
             async with aiofiles.open(input_file, encoding="utf-8", errors="ignore") as f:
                 content = await f.read()
         except (OSError, FileNotFoundError) as e:
-            logger.error(f"Could not read file '{input_file}': {e}")
+            logger.error(f"Could not read file `{input_file}`: {e}")
             return []
 
         patterns = await self._find_patterns(content)
         if not patterns:
-            logger.warning(f"No patterns found in '{input_file}'.")
+            logger.warning(f"No patterns found in `{input_file}`.")
             return []
 
-        logger.info(f"Found {len(patterns)} patterns in '{input_file}'. Splitting...")
+        logger.info(f"Found {len(patterns)} patterns in `{input_file}`. Splitting...")
 
         write_tasks = []
         output_paths = []
@@ -113,7 +113,7 @@ class LogsSplitter:
 
         if write_tasks:
             await asyncio.gather(*write_tasks)
-            logger.success(f"Finished processing '{input_file}'.")
+            logger.success(f"Finished processing `{input_file}`.")
 
         return output_paths
 
