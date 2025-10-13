@@ -645,12 +645,28 @@ function setupEventListeners() {
     const paletteTextInput = document.getElementById('param-palette-text');
     const hiddenPaletteInput = document.getElementById('param-palette');
 
+    let simpleParamsCache = {};
+
     generationModeSelector.addEventListener('change', (e) => {
         if (e.target.value === 'simple') {
             simpleParamsContainer.style.display = 'block';
             paletteParamsContainer.style.display = 'none';
             hiddenPaletteInput.value = '';
+
+            if (simpleParamsCache.numLeds !== undefined) {
+                document.getElementById('param-num-leds').value = simpleParamsCache.numLeds;
+                document.getElementById('param-color').value = simpleParamsCache.color;
+                document.getElementById('param-fade').value = simpleParamsCache.fade;
+                document.getElementById('param-sequence').value = simpleParamsCache.sequence;
+            }
         } else {
+            simpleParamsCache = {
+                numLeds: document.getElementById('param-num-leds').value,
+                color: document.getElementById('param-color').value,
+                fade: document.getElementById('param-fade').value,
+                sequence: document.getElementById('param-sequence').value
+            };
+
             simpleParamsContainer.style.display = 'none';
             paletteParamsContainer.style.display = 'block';
         }
