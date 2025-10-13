@@ -20,7 +20,8 @@ class SuccessResponse(BaseModel):
 
 
 class DeviceData(BaseModel):
-    etalon_collection: str
+    etalon_collection: str | None
+    measured_collections: list[str] | None
 
     class Config:  # noqa: D106
         extra = "allow"

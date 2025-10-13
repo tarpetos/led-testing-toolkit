@@ -123,19 +123,30 @@ function hideProcessingAnimation(form) {
     }
 }
 
+function setupOutputTypeSwitcher(selectId, inputId) {
+    const typeSelector = document.getElementById(selectId);
+    const targetInput = document.getElementById(inputId);
+
+    if (!typeSelector || !targetInput) return;
+
+    typeSelector.addEventListener('change', (e) => {
+        if (e.target.value === 'db' && targetInput.value.endsWith('.log')) {
+            targetInput.value = '';
+        }
+    });
+}
+
 window.onload = () => {
     const modal = document.getElementById("plot-modal");
     const span = document.getElementsByClassName("close")[0];
     span.onclick = function () {
         modal.style.display = "none";
     }
-
     modal.addEventListener('click', (event) => {
-        if (event.target === modal) {
+        if (event.target == modal) {
             modal.style.display = "none";
         }
     });
-
     setupDropZone("split-drop-zone", "split-input-files", "split-file-list", true);
     setupDropZone("source-drop-zone", "source-log-file", "source-file-list", false);
     setupDropZone("compare-log-drop-zone", "compare-log-file", "compare-log-file-list", false, (files) => {
@@ -479,12 +490,18 @@ function setupEventListeners() {
         e.preventDefault();
         const form = e.target;
         const formData = new FormData();
-
         const mode = form.querySelector('#param-generation-mode').value;
 
+        const outputType = form.querySelector('#param-output-type').value;
+        const outputTarget = form.querySelector('#param-output-target').value;
+
+        if (outputType === 'log') {
+            formData.append('output_file', outputTarget);
+        } else {
+            formData.append('save_to_db', outputTarget);
+        }
+
         formData.append('mode', 'instant');
-        formData.append('output_file', form.querySelector('#param-output-file').value);
-        formData.append('save_to_db', form.querySelector('#param-save-to-db').value);
         formData.append('duration', form.querySelector('#param-duration').value);
         formData.append('interval', form.querySelector('#param-interval').value);
         formData.append('noise', form.querySelector('#param-noise').value);
@@ -515,7 +532,7 @@ function setupEventListeners() {
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = url;
-                a.download = form.querySelector('#param-output-file').value || 'led_indication.log';
+                a.download = outputType === 'log' ? outputTarget : 'led_indication.log';
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
@@ -560,8 +577,16 @@ function setupEventListeners() {
             formData.append('pattern_name', form.querySelector('#source-db-pattern-name').value);
             formData.append('process_all', form.querySelector('#source-db-process-all').checked.toString());
         }
-        formData.append('save_to_db', form.querySelector('#source-save-to-db').value);
-        formData.append('output_dir', form.querySelector('#source-output-dir').value);
+
+        const outputType = form.querySelector('#source-output-type').value;
+        const outputTarget = form.querySelector('#source-output-target').value;
+
+        if (outputType === 'log') {
+            formData.append('output_dir', outputTarget);
+        } else {
+            formData.append('save_to_db', outputTarget);
+        }
+
         formData.append('count', form.querySelector('#source-count').value);
         formData.append('noise', form.querySelector('#source-noise').value);
         formData.append('lag', form.querySelector('#source-lag').value);
@@ -584,7 +609,8 @@ function setupEventListeners() {
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = url;
-                a.download = contentType.includes('application/zip') ? 'generated_logs.zip' : 'generated_from_source.log';
+                const isZip = contentType.includes('application/zip');
+                a.download = isZip ? 'generated_logs.zip' : (outputType === 'log' ? outputTarget : 'generated_log.log');
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
@@ -633,6 +659,9 @@ function setupEventListeners() {
     paletteTextInput.addEventListener('input', (e) => {
         hiddenPaletteInput.value = e.target.value;
     });
+
+    setupOutputTypeSwitcher('param-output-type', 'param-output-target');
+    setupOutputTypeSwitcher('source-output-type', 'source-output-target');
 }
 
 function setupPlayerControls() {

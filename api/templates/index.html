@@ -208,13 +208,16 @@
                         <div id="from-parameters-tab" class="sub-tab-content active">
                             <h4>Generate from parameters</h4>
                             <form id="generate-from-parameters-form">
+
                                 <div class="control-group">
-                                    <label for="param-output-file">Output file</label>
-                                    <input type="text" id="param-output-file" value="led_indication.log">
-                                </div>
-                                <div class="control-group">
-                                    <label for="param-save-to-db">Save to DB collection</label>
-                                    <input type="text" id="param-save-to-db">
+                                    <label for="param-output-target">Output target</label>
+                                    <div style="display: flex; gap: 10px;">
+                                        <select id="param-output-type" style="width: 150px; flex-shrink: 0;">
+                                            <option value="log" selected>Log file</option>
+                                            <option value="db">Database</option>
+                                        </select>
+                                        <input type="text" id="param-output-target" value="led_indication.log" required>
+                                    </div>
                                 </div>
                                 <div class="control-group">
                                     <label for="param-duration">Duration (s)</label>
@@ -248,11 +251,11 @@
                                 <div id="simple-params-container">
                                     <div class="control-group">
                                         <label for="param-num-leds">Number of LEDs</label>
-                                        <input type="number" id="param-num-leds">
+                                        <input type="number" id="param-num-leds" value="1" required>
                                     </div>
                                     <div class="control-group">
                                         <label for="param-color">Color (R,G,B)</label>
-                                        <input type="text" id="param-color">
+                                        <input type="text" id="param-color" value="55,155,255" required>
                                     </div>
                                     <div class="control-group">
                                         <label for="param-fade">Fade (s)</label>
@@ -331,13 +334,16 @@
                                         <input type="checkbox" id="source-db-process-all">
                                     </div>
                                 </div>
+
                                 <div class="control-group">
-                                    <label for="source-save-to-db">Save to DB collection</label>
-                                    <input type="text" id="source-save-to-db">
-                                </div>
-                                <div class="control-group">
-                                    <label for="source-output-dir">Output directory</label>
-                                    <input type="text" id="source-output-dir" value="generated_logs">
+                                    <label for="source-output-target">Output target</label>
+                                    <div style="display: flex; gap: 10px;">
+                                        <select id="source-output-type" style="width: 150px; flex-shrink: 0;">
+                                            <option value="log" selected>Log file</option>
+                                            <option value="db">Database</option>
+                                        </select>
+                                        <input type="text" id="source-output-target" value="generated_from_source.log" required>
+                                    </div>
                                 </div>
                                 <div class="control-group">
                                     <label for="source-count">Count</label>
