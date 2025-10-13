@@ -455,6 +455,10 @@ body.is-resizing #ledContainer {
     margin-bottom: 20px;
 }
 
+.tab-header button {
+    font-weight: bold;
+}
+
 .tab-link {
     flex: 1;
     text-align: center;
