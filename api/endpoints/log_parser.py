@@ -1,8 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, File, HTTPException, UploadFile
 
-from api.models.log_parser_models import SelectPatternResponse, UploadLogResponse
+from api.models.requests import SelectPatternRequest
+from api.models.responses import SelectPatternResponse, UploadLogResponse
 from api.services.log_parser_service import log_parser_service
 from api.services.player_service import player_service
 from led_testing_toolkit.utils.data_processing import convert_normalized_to_raw_format
@@ -20,10 +21,9 @@ async def upload_log_file(file: Annotated[UploadFile, File()] = ...) -> UploadLo
 
 
 @router.post("/select-pattern")
-async def select_log_pattern(request: Request) -> SelectPatternResponse:
+async def select_log_pattern(request: SelectPatternRequest) -> SelectPatternResponse:
     try:
-        body = await request.json()
-        pattern_index = int(body.get("index"))
+        pattern_index = request.index
     except (ValueError, TypeError) as e:
         raise HTTPException(status_code=400, detail="Invalid pattern index provided.") from e
 

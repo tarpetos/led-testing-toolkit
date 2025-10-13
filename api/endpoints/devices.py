@@ -3,12 +3,11 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 
-from api.models.common_models import MessageResponse
-from api.models.devices_models import (
+from api.models.requests import SelectEtalonRequest, SelectMeasuredRequest
+from api.models.responses import (
     GetDevicesResponse,
     GetEtalonPatternsResponse,
-    SelectEtalonRequest,
-    SelectMeasuredRequest,
+    MessageResponse,
 )
 from api.services.device_services import device_service
 from api.services.player_service import player_service
@@ -56,7 +55,7 @@ async def select_etalon(device_name: str, request: SelectEtalonRequest) -> Messa
 
 
 @router.get("/measured/{collection_name}/records")
-async def get_measured_records(collection_name: str):
+async def get_measured_records(collection_name: str) -> list[str]:
     return await device_service.get_measured_records(collection_name)
 
 

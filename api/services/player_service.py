@@ -2,7 +2,7 @@ import asyncio
 import time
 from contextlib import suppress
 
-from api.models.schemas import LedState, PlayerStatus, PlayerUpdate
+from api.models.player import LedState, PlayerStatus, PlayerUpdate
 from led_testing_toolkit.mongo_db_connector import MongoDbConnector
 
 

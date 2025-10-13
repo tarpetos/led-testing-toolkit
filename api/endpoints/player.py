@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
-from api.models.common_models import StatusResponse
-from api.models.player_models import SeekRequest, SeekResponse
+from api.models.requests import SeekRequest
+from api.models.responses import SeekResponse, StatusResponse
 from api.services.player_service import player_service
 
 router = APIRouter(prefix="/player", tags=["Player"])
