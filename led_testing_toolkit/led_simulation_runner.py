@@ -35,7 +35,7 @@ class ReplayPattern(Pattern):
         for channels in pattern_data.values():
             for records in channels.values():
                 if records and records[0].coordinates:
-                    local_max = max((p.x for p in records[0].coordinates), default=0.0)
+                    local_max = max((p.z for p in records[0].coordinates), default=0.0)
                     max_time = max(max_time, local_max)
 
         super().__init__(numeric_ids, 0.0, max_time)
@@ -47,37 +47,47 @@ class ReplayPattern(Pattern):
             self._prepped_data[led_name] = {}
             for channel, records in channels.items():
                 if records and records[0].coordinates:
-                    points = sorted(records[0].coordinates, key=lambda p: p.x)
+                    points = sorted(records[0].coordinates, key=lambda p: p.z)
                     x_vals = [p.x for p in points]
                     y_vals = [p.y for p in points]
-                    if not x_vals or x_vals[0] != 0:
+                    z_vals = [p.z for p in points]
+
+                    if not z_vals or z_vals[0] != 0:
                         x_vals.insert(0, 0.0)
                         y_vals.insert(0, 0.0)
-                    self._prepped_data[led_name][channel] = (x_vals, y_vals)
+                        z_vals.insert(0, 0.0)
 
-    def update(self, elapsed_s: float) -> dict[str, list[int]]:
+                    self._prepped_data[led_name][channel] = (z_vals, y_vals, x_vals)
+
+    def update(self, elapsed_s: float) -> dict[str, dict[str, float | list[int]]]:
         states = {}
         if not (self.start_time <= elapsed_s < self.end_time and self.end_time > 0):
             return states
 
         for led_name in self.led_names:
             if led_name not in self._prepped_data:
-                states[led_name] = [0, 0, 0]
+                states[led_name] = {"color": [0, 0, 0], "rel_time": 0.0}
                 continue
 
             r, g, b = 0.0, 0.0, 0.0
+            r_rel_time, g_rel_time, b_rel_time = 0.0, 0.0, 0.0
+
             if "r" in self._prepped_data[led_name] and self._prepped_data[led_name]["r"]:
-                x, y = self._prepped_data[led_name]["r"]
-                r = np.interp(elapsed_s, x, y)
+                z, y, x = self._prepped_data[led_name]["r"]
+                r = np.interp(elapsed_s, z, y)
+                r_rel_time = np.interp(elapsed_s, z, x)
             if "g" in self._prepped_data[led_name] and self._prepped_data[led_name]["g"]:
-                x, y = self._prepped_data[led_name]["g"]
-                g = np.interp(elapsed_s, x, y)
+                z, y, x = self._prepped_data[led_name]["g"]
+                g = np.interp(elapsed_s, z, y)
+                g_rel_time = np.interp(elapsed_s, z, x)
             if "b" in self._prepped_data[led_name] and self._prepped_data[led_name]["b"]:
-                x, y = self._prepped_data[led_name]["b"]
-                b = np.interp(elapsed_s, x, y)
+                z, y, x = self._prepped_data[led_name]["b"]
+                b = np.interp(elapsed_s, z, y)
+                b_rel_time = np.interp(elapsed_s, z, x)
 
             final_color = [max(0, min(255, int(c))) for c in [r, g, b]]
-            states[led_name] = final_color
+            rel_time = (r_rel_time + g_rel_time + b_rel_time) / 3.0
+            states[led_name] = {"color": final_color, "rel_time": rel_time}
         return states
 
 
@@ -86,7 +96,7 @@ class SimulationRunner:
         self.args = args
         self.logger = logger
 
-    def _convert_db_doc_to_normalized_data(self, doc: dict[str, Any] | Mapping[str, Any]) -> NormalizedLedData:
+    def _convert_db_doc_to_normalized_data(self, doc: dict[str, Any] | Mapping[str, Any]) -> NormalizedLedData:  # noqa: C901
         led_data = {}
         led_identifier = "LED"
         first_abs_time = float("inf")
@@ -94,7 +104,10 @@ class SimulationRunner:
         for key, value in doc.items():
             if isinstance(key, str) and key.startswith(led_identifier) and isinstance(value, list) and value:
                 try:
-                    min_time_in_led = min(p[2] for p in value if isinstance(p, list) and len(p) == 3)
+                    valid_times = [p[2] for p in value if isinstance(p, list) and len(p) == 3 and p[2] is not None]
+                    if not valid_times:
+                        continue
+                    min_time_in_led = min(valid_times)
                     first_abs_time = min(first_abs_time, min_time_in_led)
                 except (ValueError, TypeError, IndexError):
                     continue
@@ -107,42 +120,78 @@ class SimulationRunner:
                 continue
             led_name = key
             led_data[led_name] = {"r": [Record()], "g": [Record()], "b": [Record()]}
-            if not isinstance(value, list):
+            if not isinstance(value, list) or not value:
                 continue
+
+            min_rel_time_for_led = float("inf")
+            try:
+                valid_times = [p[0] for p in value if isinstance(p, list) and len(p) == 3 and p[0] is not None]
+                min_rel_time_for_led = min(valid_times) if valid_times else 0
+            except (ValueError, TypeError, IndexError):
+                min_rel_time_for_led = 0
+            if min_rel_time_for_led == float("inf"):
+                min_rel_time_for_led = 0
 
             for point_data in value:
                 try:
                     rel_time, rgb, abs_time = point_data
                     r_val, g_val, b_val = rgb
-                    timeline_time = abs_time - first_abs_time
-                    led_data[led_name]["r"][0].coordinates.append(Point(x=timeline_time, y=r_val, z=rel_time))
-                    led_data[led_name]["g"][0].coordinates.append(Point(x=timeline_time, y=g_val, z=rel_time))
-                    led_data[led_name]["b"][0].coordinates.append(Point(x=timeline_time, y=b_val, z=rel_time))
+
+                    timeline_time = (abs_time or 0.0) - first_abs_time
+                    new_rel_time = (rel_time or 0.0) - min_rel_time_for_led
+
+                    led_data[led_name]["r"][0].coordinates.append(Point(x=new_rel_time, y=r_val, z=timeline_time))
+                    led_data[led_name]["g"][0].coordinates.append(Point(x=new_rel_time, y=g_val, z=timeline_time))
+                    led_data[led_name]["b"][0].coordinates.append(Point(x=new_rel_time, y=b_val, z=timeline_time))
                 except (ValueError, TypeError, IndexError) as e:
                     self.logger.warning(f"Skipping malformed data point for {led_name}: {point_data} | Error: {e!s}")
         return led_data
 
-    def _adapt_parser_data_for_replay(self, pattern_data: NormalizedLedData) -> NormalizedLedData:
+    def _adapt_parser_data_for_replay(self, pattern_data: NormalizedLedData) -> NormalizedLedData:  # noqa: C901, PLR0912
         adapted_data = {}
         first_abs_time = float("inf")
 
         for channels in pattern_data.values():
-            if "r" in channels and channels["r"] and channels["r"][0].coordinates:
-                try:
-                    min_time_in_led = min(p.z for p in channels["r"][0].coordinates)
-                    first_abs_time = min(first_abs_time, min_time_in_led)
-                except (ValueError, TypeError):
-                    continue
+            for color in ("r", "g", "b"):
+                if color in channels and channels[color] and channels[color][0].coordinates:
+                    try:
+                        valid_times = [p.z for p in channels[color][0].coordinates if p.z is not None]
+                        if not valid_times:
+                            continue
+                        min_time_in_channel = min(valid_times)
+                        first_abs_time = min(first_abs_time, min_time_in_channel)
+                    except (ValueError, TypeError):
+                        continue
 
         if first_abs_time == float("inf"):
             first_abs_time = 0
+            self.logger.warning("Could not determine a valid first_abs_time for replay pattern. Defaulting to 0.")
 
         for led_name, channels in pattern_data.items():
             adapted_data[led_name] = {}
+
+            min_rel_time_for_led = float("inf")
+            for color in ("r", "g", "b"):
+                if color in channels and channels[color] and channels[color][0].coordinates:
+                    try:
+                        valid_times = [p.x for p in channels[color][0].coordinates if p.x is not None]
+                        if not valid_times:
+                            continue
+                        min_rel_time_for_led = min(min_rel_time_for_led, *valid_times)
+                    except (ValueError, TypeError):
+                        continue
+
+            if min_rel_time_for_led == float("inf"):
+                min_rel_time_for_led = 0
+
             for color, records in channels.items():
                 new_coords = []
                 if records and records[0].coordinates:
-                    new_coords.extend([Point(x=p.z - first_abs_time, y=p.y, z=p.x) for p in records[0].coordinates])
+                    for p in records[0].coordinates:
+                        timeline_time = (p.z or 0.0) - first_abs_time
+                        new_rel_time = (p.x or 0.0) - min_rel_time_for_led
+                        new_coords.append(Point(x=new_rel_time, y=p.y, z=timeline_time))
+
                 adapted_data[led_name][color] = [Record(coordinates=new_coords)]
 
         return adapted_data

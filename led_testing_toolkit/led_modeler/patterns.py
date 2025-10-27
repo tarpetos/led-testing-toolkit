@@ -19,27 +19,11 @@ class Pattern(ABC):
         self.led_names = {f"LED{i}" for i in self.led_ids}
 
     def get_active_leds(self) -> set[str]:
-        """
-        Returns the set of LED names controlled by this pattern.
-
-        Returns:
-            A set of strings, e.g., {"LED1", "LED3"}.
-
-        """
         return self.led_names
 
     @abstractmethod
-    def update(self, elapsed_s: float) -> dict[str, list[int]]:
-        """
-        Calculates the state of all controlled LEDs at a given time.
-
-        Args:
-            elapsed_s: The total elapsed time in the simulation.
-
-        Returns:
-            A dictionary mapping LED names to their calculated [R, G, B] color.
-
-        """
+    def update(self, elapsed_s: float) -> dict[str, dict[str, float | list[int]]]:
+        pass
 
 
 class FadePattern(Pattern):
@@ -49,7 +33,7 @@ class FadePattern(Pattern):
         super().__init__(config.led_ids, config.start_time, config.end_time)
         self.config = config
 
-    def update(self, elapsed_s: float) -> dict[str, list[int]]:
+    def update(self, elapsed_s: float) -> dict[str, dict[str, float | list[int]]]:
         states = {}
         if not (self.start_time <= elapsed_s < self.end_time):
             return states
@@ -66,9 +50,10 @@ class FadePattern(Pattern):
 
         progress = max(0, min(1, progress))
         final_color = [lerp(0, c, progress) for c in self.config.color]
+        rel_time = max(0.0, time_in_pattern)
 
         for led_id in self.led_ids:
-            states[f"LED{led_id}"] = final_color
+            states[f"LED{led_id}"] = {"color": final_color, "rel_time": rel_time}
         return states
 
 
@@ -79,7 +64,7 @@ class ChaserPattern(Pattern):
         super().__init__(config.led_ids, config.start_time, config.end_time)
         self.config = config
 
-    def update(self, elapsed_s: float) -> dict[str, list[int]]:
+    def update(self, elapsed_s: float) -> dict[str, dict[str, float | list[int]]]:
         states = {}
         if not (self.start_time <= elapsed_s < self.end_time):
             return states
@@ -94,7 +79,7 @@ class ChaserPattern(Pattern):
 
             if pulse_effect > 0:
                 final_color = [lerp(0, c, pulse_effect) for c in self.config.color]
-                states[f"LED{led_id}"] = final_color
+                states[f"LED{led_id}"] = {"color": final_color, "rel_time": time_in_pattern}
         return states
 
 
@@ -105,7 +90,7 @@ class KeyframesPattern(Pattern):
         super().__init__(config.led_ids, config.start_time, config.end_time)
         self.config = config
 
-    def update(self, elapsed_s: float) -> dict[str, list[int]]:
+    def update(self, elapsed_s: float) -> dict[str, dict[str, float | list[int]]]:
         states = {}
         if not (self.start_time <= elapsed_s < self.end_time) or not self.config.keyframes:
             return states
@@ -127,7 +112,7 @@ class KeyframesPattern(Pattern):
                     break
 
         for led_id in self.led_ids:
-            states[f"LED{led_id}"] = color
+            states[f"LED{led_id}"] = {"color": color, "rel_time": time_in_pattern}
         return states
 
 
@@ -140,14 +125,15 @@ class SimplePattern(Pattern):
         self.fade_s = fade_s
         self.sequence = sequence
 
-    def update(self, elapsed_s: float) -> dict[str, list[int]]:
+    def update(self, elapsed_s: float) -> dict[str, dict[str, float | list[int]]]:
         states = {}
         for led_id in self.led_ids:
             start_time = 0.0 if self.sequence == "all_at_once" else (led_id - 1) * self.fade_s
 
             if elapsed_s >= start_time:
-                progress = (elapsed_s - start_time) / self.fade_s if self.fade_s > 0 else 1.0
+                rel_time = max(0.0, elapsed_s - start_time)
+                progress = rel_time / self.fade_s if self.fade_s > 0 else 1.0
                 progress = min(1.0, progress)
                 final_color = [lerp(0, c, progress) for c in self.color]
-                states[f"LED{led_id}"] = final_color
+                states[f"LED{led_id}"] = {"color": final_color, "rel_time": rel_time}
         return states

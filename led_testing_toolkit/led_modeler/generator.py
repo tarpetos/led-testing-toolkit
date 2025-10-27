@@ -40,7 +40,7 @@ class LedGenerator:
         self.save_to_db_collection = save_to_db_collection
         self.db_output_data: dict[str, list] = defaultdict(list)
 
-    def _update_states(self, elapsed_s: float) -> dict[str, list[int]]:
+    def _update_states(self, elapsed_s: float) -> dict[str, dict[str, float | list[int]]]:
         """
         Updates the master LED states by evaluating all active patterns.
 
@@ -55,12 +55,19 @@ class LedGenerator:
         for p in self.patterns:
             all_led_names.update(p.get_active_leds())
 
-        final_states = {led_name: [0, 0, 0] for led_name in all_led_names}
+        final_states = {led_name: {"color": [0, 0, 0], "rel_time": 0.0} for led_name in all_led_names}
 
         for pattern in self.patterns:
             pattern_states = pattern.update(elapsed_s)
-            for led_name, color in pattern_states.items():
-                final_states[led_name] = add_colors(final_states.get(led_name, [0, 0, 0]), color)
+            for led_name, state_data in pattern_states.items():
+                final_states[led_name]["color"] = add_colors(
+                    final_states.get(led_name, {}).get("color", [0, 0, 0]),
+                    state_data["color"],
+                )
+                final_states[led_name]["rel_time"] = max(
+                    final_states.get(led_name, {}).get("rel_time", 0.0),
+                    state_data["rel_time"],
+                )
 
         return final_states
 
@@ -108,13 +115,16 @@ class LedGenerator:
 
         while should_continue():
             elapsed_s = get_elapsed_time()
-            ideal_states = self._update_states(elapsed_s)
-            reportable_states = self.simulator.get_reading(ideal_states)
+            ideal_states_with_meta = self._update_states(elapsed_s)
+
+            ideal_colors = {led_id: state["color"] for led_id, state in ideal_states_with_meta.items()}
+            reportable_states = self.simulator.get_reading(ideal_colors)
 
             if reportable_states:
                 if self.save_to_db_collection:
                     for led_id, rgb in reportable_states.items():
-                        self.db_output_data[led_id].append([elapsed_s, rgb, elapsed_s])
+                        rel_time = ideal_states_with_meta[led_id]["rel_time"]
+                        self.db_output_data[led_id].append([rel_time, rgb, elapsed_s])
                 else:
                     log_message = self._format_log_message(reportable_states)
                     if self.config.mode == "instant":
