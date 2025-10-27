@@ -4,6 +4,7 @@ import sys
 from argparse import Namespace
 from collections.abc import Mapping
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import loguru
@@ -254,7 +255,7 @@ class SimulationRunner:
 
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 output_filename = f"{self.args.source_type}_{base_name}_{timestamp}_{i}_{j}.log"
-                output_path = self.args.output_dir / output_filename
+                output_path = Path(self.args.output_dir) / output_filename
                 output_files.append(str(output_path))
 
                 sim_logger = configure_logger(str(output_path), "LedGenerator")
