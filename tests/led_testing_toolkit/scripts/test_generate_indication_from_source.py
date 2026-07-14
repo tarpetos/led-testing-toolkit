@@ -38,3 +38,5 @@ def test_dunder_main():
         namespace = {"__name__": "__main__"}
         exec(compile(code, script_path, "exec"), namespace)
         mock_run.assert_called_once()
+        coro = mock_run.call_args[0][0]
+        coro.close()

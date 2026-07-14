@@ -137,5 +137,24 @@ async def test_aggregator_sync_nan_plateau(interpolator):
     r1 = Record(coordinates=pts)
     dataset = Dataset(records=[r1])
     agg = Aggregator(dataset=dataset, interpolator=interpolator)
-    await agg.start()
+
+    original_nanmedian = np.nanmedian
+    original_nanmean = np.nanmean
+
+    def safe_nanmedian(a, *args, **kwargs):
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            return original_nanmedian(a, *args, **kwargs)
+
+    def safe_nanmean(a, *args, **kwargs):
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            return original_nanmean(a, *args, **kwargs)
+
+    with mock.patch("led_testing_toolkit.math.aggregator.np.nanmedian", side_effect=safe_nanmedian), \
+         mock.patch("led_testing_toolkit.math.aggregator.np.nanmean", side_effect=safe_nanmean):
+        await agg.start()
+
     assert len(agg.etalon.coordinates) >= 0

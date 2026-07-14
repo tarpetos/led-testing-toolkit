@@ -65,7 +65,7 @@ async def read_root(request: Request) -> _TemplateResponse:
         The rendered template response.
 
     """
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse(request, "index.html")
 
 
 if __name__ == "__main__":  # pragma: no cover

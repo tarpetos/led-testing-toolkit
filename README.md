@@ -40,9 +40,6 @@ flowchart LR
     F --> G
 ```
 
-> [!IMPORTANT]
-> **Database Requirement:** This project relies heavily on persisting large datasets of time-series LED operations and executing complex queries. **A real, running MongoDB instance is strictly required.** The system will not function with an in-memory mock or without valid DB credentials.
-
 ---
 
 ## ✨ Key Features
