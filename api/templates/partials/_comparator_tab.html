@@ -1,0 +1,73 @@
+<div id="compare-patterns-tab" class="tab-content">
+    <div class="upload-section">
+        <div class="sub-tab-container">
+            <div class="sub-tab-header">
+                <button class="sub-tab-link active" onclick="openSubTab(event, 'compare-from-db-tab')">From
+                    database
+                </button>
+                <button class="sub-tab-link" onclick="openSubTab(event, 'compare-from-log-tab')">From log
+                    file
+                </button>
+            </div>
+
+            <div id="compare-from-db-tab" class="sub-tab-content active">
+                <h4>Compare from database</h4>
+                <form id="compare-patterns-form">
+                    <div class="control-group">
+                        <label for="compare-measured-collection">Measured collection</label>
+                        <select id="compare-measured-collection" required></select>
+                    </div>
+                    <div class="control-group">
+                        <label for="compare-measured-record">Measured record</label>
+                        <select id="compare-measured-record" required disabled></select>
+                    </div>
+                    <div class="control-group">
+                        <label for="compare-etalon-device">Etalon device</label>
+                        <input type="text" id="compare-etalon-device" required>
+                    </div>
+                    <div class="control-group">
+                        <label for="compare-etalon-pattern">Etalon pattern</label>
+                        <input type="text" id="compare-etalon-pattern" required>
+                    </div>
+                    <button type="submit" class="btn">Compare</button>
+                </form>
+                <div id="compare-patterns-output"></div>
+            </div>
+
+            <div id="compare-from-log-tab" class="sub-tab-content">
+                <h4>Compare from log file</h4>
+                <form id="compare-from-log-form">
+                    <div class="control-group">
+                        <label for="compare-log-file">Log file</label>
+                        <div class="drop-zone" id="compare-log-drop-zone">
+                            <div class="drop-zone-content">
+                                <i class="fa-solid fa-upload"></i>
+                                <span class="drop-zone__prompt">Put file here or click to select</span>
+                            </div>
+                            <input type="file" id="compare-log-file" class="drop-zone__input"
+                                   accept=".log"/>
+                        </div>
+                        <div id="compare-log-file-list"></div>
+                    </div>
+                    <div class="control-group">
+                        <label for="compare-log-pattern">Pattern</label>
+                        <select id="compare-log-pattern" required disabled></select>
+                    </div>
+                    <div class="control-group">
+                        <label for="compare-log-etalon-device">Etalon device</label>
+                        <input type="text" id="compare-log-etalon-device" required>
+                    </div>
+                    <div class="control-group">
+                        <label for="compare-log-etalon-pattern">Etalon pattern</label>
+                        <input type="text" id="compare-log-etalon-pattern" required>
+                    </div>
+                    <button type="submit" class="btn">Compare</button>
+                </form>
+                <div id="compare-from-log-output"></div>
+                <div class="spinner-overlay" id="compare-log-spinner" style="display: none;">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

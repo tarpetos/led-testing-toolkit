@@ -1,0 +1,178 @@
+<div id="generate-indication-tab" class="tab-content">
+    <div class="upload-section">
+        <div class="sub-tab-container">
+            <div class="sub-tab-header">
+                <button class="sub-tab-link active" onclick="openSubTab(event, 'from-parameters-tab')">From
+                    parameters
+                </button>
+                <button class="sub-tab-link" onclick="openSubTab(event, 'from-source-tab')">From source
+                </button>
+            </div>
+
+            <div id="from-parameters-tab" class="sub-tab-content active">
+                <h4>Generate from parameters</h4>
+                <form id="generate-from-parameters-form">
+
+                    <div class="control-group">
+                        <label for="param-output-target">Output target</label>
+                        <div style="display: flex; gap: 10px;">
+                            <select id="param-output-type" style="width: 150px; flex-shrink: 0;">
+                                <option value="log" selected>Log file</option>
+                                <option value="db">Database</option>
+                            </select>
+                            <input type="text" id="param-output-target" value="led_indication.log" required>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label for="param-duration">Duration (s)</label>
+                        <input type="number" id="param-duration" min="0" step="0.1" required>
+                    </div>
+                    <div class="control-group">
+                        <label for="param-interval">Interval (ms)</label>
+                        <input type="text" id="param-interval" value="15-40">
+                    </div>
+                    <div class="control-group">
+                        <label for="param-noise">Noise</label>
+                        <input type="number" id="param-noise" value="3.0" min="0" step="0.1">
+                    </div>
+                    <div class="control-group">
+                        <label for="param-lag">Lag</label>
+                        <input type="number" id="param-lag" value="0.4" min="0" max="1" step="0.01">
+                    </div>
+                    <div class="control-group">
+                        <label for="param-reporting-chance">Reporting chance</label>
+                        <input type="number" id="param-reporting-chance" value="0.85" min="0" max="1" step="0.01">
+                    </div>
+
+                    <div class="control-group">
+                        <label for="param-generation-mode">Generation mode</label>
+                        <select id="param-generation-mode">
+                            <option value="simple" selected>Simple parameters</option>
+                            <option value="palette">From palette</option>
+                        </select>
+                    </div>
+
+                    <div id="simple-params-container">
+                        <div class="control-group">
+                            <label for="param-num-leds">Number of LEDs</label>
+                            <input type="number" id="param-num-leds" value="1" min="1" step="1">
+                        </div>
+                        <div class="control-group">
+                            <label for="param-color">Color (R,G,B)</label>
+                            <input type="text" id="param-color" value="55,155,255">
+                        </div>
+                        <div class="control-group">
+                            <label for="param-fade">Fade (s)</label>
+                            <input type="number" id="param-fade" value="0.5" min="0" step="0.01">
+                        </div>
+                        <div class="control-group">
+                            <label for="param-sequence">Sequence</label>
+                            <select id="param-sequence">
+                                <option value="all_at_once">All at once</option>
+                                <option value="sequential">Sequential</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="palette-params-container" style="display: none;">
+                        <div class="control-group">
+                            <label for="param-palette-text">Palette (JSON text)</label>
+                            <textarea id="param-palette-text" rows="5" class="json-textarea"></textarea>
+                        </div>
+                        <div class="separator">OR</div>
+                        <div class="control-group">
+                            <label>Upload palette file</label>
+                            <div class="drop-zone" id="palette-drop-zone">
+                                <div class="drop-zone-content">
+                                    <i class="fa-solid fa-upload"></i>
+                                    <span class="drop-zone__prompt">Put file here or click to select</span>
+                                </div>
+                                <input type="file" id="param-palette-file" class="drop-zone__input"
+                                       accept=".json"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <input type="hidden" id="param-palette">
+
+                    <button type="submit" class="btn">Generate</button>
+                </form>
+                <div id="generate-from-parameters-output"></div>
+            </div>
+
+            <div id="from-source-tab" class="sub-tab-content">
+                <h4>Generate from source</h4>
+                <form id="generate-from-source-form">
+                    <div class="control-group">
+                        <label for="source-type">Source type</label>
+                        <select id="source-type">
+                            <option value="log">Log file</option>
+                            <option value="db">Database</option>
+                        </select>
+                    </div>
+                    <div id="source-log-fields">
+                        <div class="control-group">
+                            <label for="source-log-file">Log file</label>
+                            <div class="drop-zone" id="source-drop-zone">
+                                <div class="drop-zone-content">
+                                    <i class="fa-solid fa-upload"></i>
+                                    <span class="drop-zone__prompt">Put file here or click to select</span>
+                                </div>
+                                <input type="file" id="source-log-file" class="drop-zone__input"
+                                       accept=".log"/>
+                            </div>
+                            <div id="source-file-list"></div>
+                        </div>
+                    </div>
+                    <div id="source-db-fields" style="display: none;">
+                        <div class="control-group">
+                            <label for="source-db-collection">Collection</label>
+                            <input type="text" id="source-db-collection">
+                        </div>
+                        <div class="control-group">
+                            <label for="source-db-pattern-name">Pattern name</label>
+                            <input type="text" id="source-db-pattern-name">
+                        </div>
+                        <div class="control-group">
+                            <label for="source-db-process-all">Process all</label>
+                            <input type="checkbox" id="source-db-process-all">
+                        </div>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="source-output-target">Output target</label>
+                        <div style="display: flex; gap: 10px;">
+                            <select id="source-output-type" style="width: 150px; flex-shrink: 0;">
+                                <option value="log" selected>Log file</option>
+                                <option value="db">Database</option>
+                            </select>
+                            <input type="text" id="source-output-target" value="generated_from_source.log" required>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label for="source-count">Count</label>
+                        <input type="number" id="source-count" value="1" min="1" step="1">
+                    </div>
+                    <div class="control-group">
+                        <label for="source-noise">Noise</label>
+                        <input type="number" id="source-noise" value="3.0" min="0" step="0.1">
+                    </div>
+                    <div class="control-group">
+                        <label for="source-lag">Lag</label>
+                        <input type="number" id="source-lag" value="0.4" min="0" max="1" step="0.01">
+                    </div>
+                    <div class="control-group">
+                        <label for="source-reporting-chance">Reporting chance</label>
+                        <input type="number" id="source-reporting-chance" value="0.85" min="0" max="1" step="0.01">
+                    </div>
+                    <div class="control-group">
+                        <label for="source-interval">Interval (ms)</label>
+                        <input type="text" id="source-interval" value="15-40">
+                    </div>
+                    <button type="submit" class="btn">Generate</button>
+                </form>
+                <div id="generate-from-source-output"></div>
+            </div>
+        </div>
+    </div>
+</div>

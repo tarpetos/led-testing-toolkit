@@ -1,0 +1,50 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: local
+    hooks:
+      - id: install-pre-push
+        name: install pre-push hook
+        entry: pre-commit install --hook-type pre-push
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+
+      - id: uv-lock
+        name: uv lock
+        entry: bash -c 'uv lock && git diff --exit-code uv.lock'
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: uv-sync
+        name: uv sync
+        entry: uv sync --frozen
+        language: system
+        types: [python]
+        pass_filenames: false
+
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.13.0
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+
+      - id: ruff-format
+        args: [--line-length=120]
+
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: pytest
+        language: system
+        types: [python]
+        pass_filenames: false
+        stages: [pre-commit, pre-push]

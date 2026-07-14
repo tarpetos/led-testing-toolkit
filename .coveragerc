@@ -1,5 +1,8 @@
 [run]
-source = led_testing_toolkit
+source =
+    api
+    led_testing_toolkit
+
 omit =
     */__init__.py
 

@@ -1,0 +1,428 @@
+import random
+import re
+import sys
+from argparse import Namespace
+from collections.abc import Mapping
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+import loguru
+import numpy as np
+from loguru._logger import Logger
+
+from led_testing_toolkit.led_modeler.generator import LedGenerator
+from led_testing_toolkit.led_modeler.models import AppConfig
+from led_testing_toolkit.led_modeler.patterns import Pattern
+from led_testing_toolkit.led_modeler.simulator import PhotoresistorSimulator
+from led_testing_toolkit.led_modeler.utils import configure_logger
+from led_testing_toolkit.led_parser import LedParser
+from led_testing_toolkit.led_types import NormalizedLedData
+from led_testing_toolkit.math.models import Point, Record
+from led_testing_toolkit.mongo_db_connector import MongoDbConnector
+from led_testing_toolkit.utils.collection_name import ETALONS_COLLECTION_SUFFIX
+
+
+class ReplayPattern(Pattern):
+    """A pattern that replays LED sequences based on normalized mathematical data."""
+
+    def __init__(self, pattern_data: NormalizedLedData) -> None:
+        """
+        Initializes the ReplayPattern instance.
+
+        Args:
+            pattern_data: The normalized LED data to replay.
+
+        Raises:
+            ValueError: If the pattern data does not contain any LED information.
+
+        """
+        all_led_names = list(pattern_data.keys())
+        if not all_led_names:
+            raise ValueError("Pattern data does not contain any LED information!")
+
+        numeric_ids = [int(match.group()) for name in all_led_names if (match := re.search(r"\d+", name))]
+
+        max_time = 0.0
+        for channels in pattern_data.values():
+            for records in channels.values():
+                if records and records[0].coordinates:
+                    local_max = max((p.z for p in records[0].coordinates), default=0.0)
+                    max_time = max(max_time, local_max)
+
+        super().__init__(numeric_ids, 0.0, max_time)
+        self._prepare_interpolation_data(pattern_data)
+
+    def _prepare_interpolation_data(self, pattern_data: NormalizedLedData) -> None:
+        """
+        Prepares internal interpolation data arrays based on the pattern data.
+
+        Args:
+            pattern_data: Normalized LED data containing records.
+
+        """
+        self._prepped_data = {}
+        for led_name, channels in pattern_data.items():
+            self._prepped_data[led_name] = {}
+            for channel, records in channels.items():
+                if records and records[0].coordinates:
+                    points = sorted(records[0].coordinates, key=lambda p: p.z)
+                    x_vals = [p.x for p in points]
+                    y_vals = [p.y for p in points]
+                    z_vals = [p.z for p in points]
+
+                    if not z_vals or z_vals[0] != 0:
+                        x_vals.insert(0, 0.0)
+                        y_vals.insert(0, 0.0)
+                        z_vals.insert(0, 0.0)
+
+                    self._prepped_data[led_name][channel] = (z_vals, y_vals, x_vals)
+
+    def update(self, elapsed_s: float) -> dict[str, dict[str, float | list[int]]]:
+        """
+        Calculates the state of each LED at a given elapsed time.
+
+        Args:
+            elapsed_s: The elapsed time in seconds.
+
+        Returns:
+            A dictionary containing the calculated LED states.
+
+        """
+        states = {}
+        if not (self.start_time <= elapsed_s < self.end_time and self.end_time > 0):
+            return states
+
+        for led_name in self.led_names:
+            if led_name not in self._prepped_data:
+                states[led_name] = {"color": [0, 0, 0], "rel_time": 0.0}
+                continue
+
+            r, g, b = 0.0, 0.0, 0.0
+            r_rel_time, g_rel_time, b_rel_time = 0.0, 0.0, 0.0
+
+            if "r" in self._prepped_data[led_name] and self._prepped_data[led_name]["r"]:
+                z, y, x = self._prepped_data[led_name]["r"]
+                r = np.interp(elapsed_s, z, y)
+                r_rel_time = np.interp(elapsed_s, z, x)
+            if "g" in self._prepped_data[led_name] and self._prepped_data[led_name]["g"]:
+                z, y, x = self._prepped_data[led_name]["g"]
+                g = np.interp(elapsed_s, z, y)
+                g_rel_time = np.interp(elapsed_s, z, x)
+            if "b" in self._prepped_data[led_name] and self._prepped_data[led_name]["b"]:
+                z, y, x = self._prepped_data[led_name]["b"]
+                b = np.interp(elapsed_s, z, y)
+                b_rel_time = np.interp(elapsed_s, z, x)
+
+            final_color = [max(0, min(255, int(c))) for c in [r, g, b]]
+            rel_time = (r_rel_time + g_rel_time + b_rel_time) / 3.0
+            states[led_name] = {"color": final_color, "rel_time": rel_time}
+        return states
+
+
+class SimulationRunner:
+    """Runner for executing LED simulations based on parsed logs or database entries."""
+
+    def __init__(self, args: Namespace, logger: Logger) -> None:
+        """
+        Initializes the SimulationRunner instance.
+
+        Args:
+            args: Command line arguments namespace containing configuration.
+            logger: Logger instance to be used for logging.
+
+        """
+        self.args = args
+        self.logger = logger
+
+    def _convert_db_doc_to_normalized_data(self, doc: dict[str, Any] | Mapping[str, Any]) -> NormalizedLedData:  # noqa: C901
+        """
+        Converts a database document into normalized LED data format.
+
+        Args:
+            doc: The database document to convert.
+
+        Returns:
+            Normalized LED data.
+
+        """
+        led_data = {}
+        led_identifier = "LED"
+        first_abs_time = float("inf")
+
+        for key, value in doc.items():
+            if isinstance(key, str) and key.startswith(led_identifier) and isinstance(value, list) and value:
+                try:
+                    valid_times = [p[2] for p in value if isinstance(p, list) and len(p) == 3 and p[2] is not None]
+                    if not valid_times:
+                        continue
+                    min_time_in_led = min(valid_times)
+                    first_abs_time = min(first_abs_time, min_time_in_led)
+                except (ValueError, TypeError, IndexError):
+                    continue
+
+        if first_abs_time == float("inf"):
+            first_abs_time = 0
+
+        for key, value in doc.items():
+            if not isinstance(key, str) or not key.startswith(led_identifier):
+                continue
+            led_name = key
+            led_data[led_name] = {"r": [Record()], "g": [Record()], "b": [Record()]}
+            if not isinstance(value, list) or not value:
+                continue
+
+            min_rel_time_for_led = float("inf")
+            try:
+                valid_times = [p[0] for p in value if isinstance(p, list) and len(p) == 3 and p[0] is not None]
+                min_rel_time_for_led = min(valid_times) if valid_times else 0
+            except (ValueError, TypeError, IndexError):
+                min_rel_time_for_led = 0
+            if min_rel_time_for_led == float("inf"):
+                min_rel_time_for_led = 0
+
+            for point_data in value:
+                try:
+                    rel_time, rgb, abs_time = point_data
+                    r_val, g_val, b_val = rgb
+
+                    timeline_time = (abs_time or 0.0) - first_abs_time
+                    new_rel_time = (rel_time or 0.0) - min_rel_time_for_led
+
+                    led_data[led_name]["r"][0].coordinates.append(Point(x=new_rel_time, y=r_val, z=timeline_time))
+                    led_data[led_name]["g"][0].coordinates.append(Point(x=new_rel_time, y=g_val, z=timeline_time))
+                    led_data[led_name]["b"][0].coordinates.append(Point(x=new_rel_time, y=b_val, z=timeline_time))
+                except (ValueError, TypeError, IndexError) as e:
+                    self.logger.warning(f"Skipping malformed data point for {led_name}: {point_data} | Error: {e!s}")
+        return led_data
+
+    def _adapt_parser_data_for_replay(self, pattern_data: NormalizedLedData) -> NormalizedLedData:  # noqa: C901, PLR0912
+        """
+        Adapts parsed pattern data for replay by adjusting absolute and relative times.
+
+        Args:
+            pattern_data: The original parsed pattern data.
+
+        Returns:
+            Adapted normalized LED data.
+
+        """
+        adapted_data = {}
+        first_abs_time = float("inf")
+
+        for channels in pattern_data.values():
+            for color in ("r", "g", "b"):
+                if color in channels and channels[color] and channels[color][0].coordinates:
+                    try:
+                        valid_times = [p.z for p in channels[color][0].coordinates if p.z is not None]
+                        if not valid_times:
+                            continue
+                        min_time_in_channel = min(valid_times)
+                        first_abs_time = min(first_abs_time, min_time_in_channel)
+                    except (ValueError, TypeError):
+                        continue
+
+        if first_abs_time == float("inf"):
+            first_abs_time = 0
+            self.logger.warning("Could not determine a valid first_abs_time for replay pattern. Defaulting to 0.")
+
+        for led_name, channels in pattern_data.items():
+            adapted_data[led_name] = {}
+
+            min_rel_time_for_led = float("inf")
+            for color in ("r", "g", "b"):
+                if color in channels and channels[color] and channels[color][0].coordinates:
+                    try:
+                        valid_times = [p.x for p in channels[color][0].coordinates if p.x is not None]
+                        if not valid_times:
+                            continue
+                        min_rel_time_for_led = min(min_rel_time_for_led, *valid_times)
+                    except (ValueError, TypeError):
+                        continue
+
+            if min_rel_time_for_led == float("inf"):
+                min_rel_time_for_led = 0
+
+            for color, records in channels.items():
+                new_coords = []
+                if records and records[0].coordinates:
+                    for p in records[0].coordinates:
+                        timeline_time = (p.z or 0.0) - first_abs_time
+                        new_rel_time = (p.x or 0.0) - min_rel_time_for_led
+                        new_coords.append(Point(x=new_rel_time, y=p.y, z=timeline_time))
+
+                adapted_data[led_name][color] = [Record(coordinates=new_coords)]
+
+        return adapted_data
+
+    async def _get_patterns_from_source(self) -> list[NormalizedLedData]:
+        """
+        Retrieves patterns from the configured source (log or db).
+
+        Returns:
+            A list of normalized LED data patterns.
+
+        """
+        if self.args.source_type == "log":
+            return await self._get_patterns_from_log()
+        if self.args.source_type == "db":
+            return await self._get_patterns_from_db()
+        return []
+
+    async def _get_patterns_from_log(self) -> list[NormalizedLedData]:
+        """
+        Retrieves patterns from a log file source.
+
+        Returns:
+            A list of normalized LED data patterns extracted from the log.
+
+        """
+        if not self.args.filepath.exists():
+            self.logger.error(f"Log file not found: {self.args.filepath}")
+            sys.exit(1)
+        parser = LedParser(str(self.args.filepath))
+        await parser.parse_patterns()
+        patterns = parser.patterns.get(self.args.filepath, [])
+        if not patterns:
+            self.logger.error(f"No patterns found in file {self.args.filepath}.")
+            sys.exit(1)
+        return patterns
+
+    async def _get_patterns_from_db(self) -> list[NormalizedLedData]:
+        """
+        Retrieves patterns from a database collection.
+
+        Returns:
+            A list of normalized LED data patterns retrieved from the database.
+
+        """
+        is_etalon_source = self.args.collection.upper().endswith(ETALONS_COLLECTION_SUFFIX)
+        db_type = "etalon" if is_etalon_source else "measured"
+
+        if is_etalon_source and not self.args.pattern_name:
+            self.logger.error(
+                f"Argument '-n/--pattern_name' is required for an etalon collection (`{self.args.collection}`).",
+            )
+            sys.exit(1)
+
+        patterns_to_process = []
+        async with MongoDbConnector() as connector:
+            if db_type == "etalon":
+                self.logger.debug(
+                    f"Loading etalon `{self.args.pattern_name}` from collection `{self.args.collection}`...",
+                )
+                await connector.use_collection(self.args.collection, auto_create=False)
+                doc = await connector.read({"_id": self.args.pattern_name.upper()})
+                if not doc:
+                    self.logger.error(
+                        f"Etalon `{self.args.pattern_name.upper()}` not found in collection `{self.args.collection}`.",
+                    )
+                    sys.exit(1)
+                patterns_to_process.append(self._convert_db_doc_to_normalized_data(doc))
+            elif db_type == "measured":
+                self.logger.debug(f"Loading records from measured collection `{self.args.collection}`...")
+                await connector.use_collection(self.args.collection, auto_create=False)
+                all_docs = await connector.read({}, find_many=True)
+                if not all_docs:
+                    self.logger.error(f"Collection `{self.args.collection}` is empty or does not exist.")
+                    sys.exit(1)
+
+                if self.args.process_all:
+                    self.logger.debug(
+                        f"Found {len(all_docs)} records. Processing all of them as per --process-all flag.",
+                    )
+                    docs_to_process = all_docs
+                else:
+                    self.logger.debug(f"Found {len(all_docs)} records. Processing ONE random record.")
+                    docs_to_process = [random.choice(all_docs)]
+
+                patterns_to_process.extend([self._convert_db_doc_to_normalized_data(doc) for doc in docs_to_process])
+        return patterns_to_process
+
+    async def run(self) -> list[str]:
+        """
+        Runs the simulation process based on the provided configuration.
+
+        Returns:
+            A list of paths to the generated output log files.
+
+        """
+        base_name = ""
+        if self.args.source_type == "log":
+            base_name = self.args.filepath.stem
+        elif self.args.source_type == "db":
+            is_etalon = self.args.collection.upper().endswith(ETALONS_COLLECTION_SUFFIX)
+            base_name = f"{self.args.collection}_{self.args.pattern_name}" if is_etalon else self.args.collection
+
+        patterns_to_process = await self._get_patterns_from_source()
+
+        if not patterns_to_process:
+            self.logger.error("No source patterns found to process. Exiting.")
+            return []
+
+        output_files = []
+        total_generations = 0
+        for i, pattern_data in enumerate(patterns_to_process):
+            pattern_num = i + 1
+            self.logger.debug(f"----- Processing Source Pattern #{pattern_num} -----")
+
+            adapted_pattern_data = (
+                self._adapt_parser_data_for_replay(pattern_data) if self.args.source_type == "log" else pattern_data
+            )
+
+            if not adapted_pattern_data:
+                self.logger.warning(f"Source pattern #{pattern_num} is empty after processing. Skipping.")
+                continue
+
+            replay_pattern = ReplayPattern(adapted_pattern_data)
+            duration = replay_pattern.end_time
+            self.logger.debug(f"Replay duration for source pattern #{pattern_num}: {duration:.2f} seconds.")
+
+            all_led_ids = list(adapted_pattern_data.keys())
+            if not all_led_ids:
+                self.logger.warning(f"No LEDs found in source pattern #{pattern_num}. Skipping.")
+                continue
+
+            for j in range(1, self.args.count + 1):
+                total_generations += 1
+                self.logger.debug(
+                    f"--- Generating Simulation {j}/{self.args.count} for Source Pattern #{pattern_num} ---",
+                )
+
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                output_filename = f"{self.args.source_type}_{base_name}_{timestamp}_{i}_{j}.log"
+                output_path = Path(self.args.output_dir) / output_filename
+                output_files.append(str(output_path))
+
+                sim_logger = configure_logger(str(output_path), "LedGenerator")
+                if not self.args.save_to_db:
+                    self.logger.debug(f"Simulations will be written to file: {output_path}")
+
+                config_dict: dict[str, Any] = {
+                    "duration": duration,
+                    "output_file": str(output_path),
+                    "num_leds": len(all_led_ids),
+                    "mode": self.args.mode,
+                    **vars(self.args),
+                    "color": "0,0,0",
+                    "sequence": "all_at_once",
+                }
+                config = AppConfig(**config_dict)
+
+                simulator = PhotoresistorSimulator(
+                    led_ids=all_led_ids,
+                    noise_level=config.noise,
+                    lag=config.lag,
+                    reporting_chance=config.reporting_chance,
+                )
+                generator = LedGenerator(
+                    config=config,
+                    patterns=[replay_pattern],
+                    simulator=simulator,
+                    logger=loguru.logger if self.args.save_to_db else sim_logger,
+                    save_to_db_collection=self.args.save_to_db,
+                )
+                await generator.run()
+
+        self.logger.success(f"Completed. Generated {total_generations} total simulations.")
+        return output_files

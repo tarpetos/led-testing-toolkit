@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', path='/images/favicon.ico') }}">
+    <title>LED Testing Toolkit</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/main.css') }}"/>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/player.css') }}"/>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/forms.css') }}"/>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/tabs.css') }}"/>
+</head>
+<body>
+<div class="main-content-wrapper">
+    <div class="container">
+        <header>
+            <h1>🔴🟢🔵 LED TESTING TOOLKIT API 🔴🟢🔵</h1>
+            <div id="status" class="status disconnected">Disconnected</div>
+        </header>
+        <div class="tab-container">
+            <div class="tab-header">
+                <button class="tab-link active" onclick="openTab(event, 'player-tab')">INDICATION PLAYER</button>
+                <button class="tab-link" onclick="openTab(event, 'split-logs-tab')">SPLITTER</button>
+                <button class="tab-link" onclick="openTab(event, 'compare-patterns-tab')">COMPARATOR</button>
+                <button class="tab-link" onclick="openTab(event, 'generate-etalons-tab')">ETALON GENERATOR</button>
+                <button class="tab-link" onclick="openTab(event, 'generate-indication-tab')">
+                    INDICATION GENERATOR
+                </button>
+            </div>
+
+            {% include "partials/_player_tab.html" %}
+            {% include "partials/_splitter_tab.html" %}
+            {% include "partials/_comparator_tab.html" %}
+            {% include "partials/_etalon_generator_tab.html" %}
+            {% include "partials/_indication_generator_tab.html" %}
+        </div>
+    </div>
+</div>
+
+<div id="player-wrapper" class="hidden">
+    <div id="resize-handle" class="resize-handle"></div>
+    <div class="player-content">
+        <div id="ledContainer" class="led-container"></div>
+        <div class="player-controls-ui">
+            <div class="player-top-bar">
+                <div class="time-info">
+                    <span id="timeInfo">00:00 / 00:00</span>
+                </div>
+                <div class="main-buttons">
+                    <button id="playBtn" onclick="togglePlay()" class="player-btn play-btn" aria-label="Play/Pause">
+                        <i class="fa-solid fa-play icon-play"></i>
+                        <i class="fa-solid fa-pause icon-pause"></i>
+                    </button>
+                    <button onclick="stopPlayback()" class="player-btn stop-btn" aria-label="Stop">
+                        <i class="fa-solid fa-stop"></i>
+                    </button>
+                </div>
+                <div class="player-view-controls">
+                    <button id="fullscreenBtn" class="player-view-btn" aria-label="Toggle fullscreen">
+                        <i class="fa-solid fa-expand icon-expand"></i>
+                        <i class="fa-solid fa-compress icon-compress"></i>
+                    </button>
+                </div>
+            </div>
+            <input type="range" id="progressSlider" min="0" value="0" step="0.001" oninput="handleSliderInput(this)"/>
+        </div>
+    </div>
+</div>
+<script src="{{ url_for('static', path='/js/utils.js') }}"></script>
+<script src="{{ url_for('static', path='/js/tabs.js') }}"></script>
+<script src="{{ url_for('static', path='/js/player.js') }}"></script>
+<script src="{{ url_for('static', path='/js/forms.js') }}"></script>
+<script src="{{ url_for('static', path='/js/main.js') }}"></script>
+<div id="plot-modal" class="modal">
+    <span class="close">&times;</span>
+    <img class="modal-content" id="modal-plot-img">
+</div>
+</body>
+</html>

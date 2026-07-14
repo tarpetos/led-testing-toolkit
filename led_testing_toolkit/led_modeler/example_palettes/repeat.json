@@ -1,0 +1,20 @@
+[
+  {
+    "type": "fade",
+    "led_ids": [1, 2, 3, 4],
+    "start_time": 0,
+    "end_time": 3,
+    "duration": 2,
+    "peak_time": 1,
+    "color": [0, 255, 0]
+  },
+  {
+    "type": "chaser",
+    "led_ids": [2, 3, 4, 1],
+    "start_time": 3,
+    "end_time": 28,
+    "color": [255, 255, 0],
+    "cycle_duration": 1.2,
+    "pulse_width": 0.2
+  }
+]

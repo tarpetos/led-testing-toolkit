@@ -1,0 +1,11 @@
+[
+  {
+    "type": "fade",
+    "led_ids": [1, 2],
+    "start_time": 1.0,
+    "end_time": 6.0,
+    "color": [0, 255, 255],
+    "duration": 5.0,
+    "peak_time": 2.5
+  }
+]

@@ -1,0 +1,40 @@
+<div id="player-tab" class="tab-content active">
+    <div class="upload-section">
+        <div class="control-group">
+            <h4>Select device</h4>
+            <div class="select-wrapper">
+                <label for="deviceSelector"></label
+                ><select id="deviceSelector"></select>
+            </div>
+        </div>
+        <div class="pattern-selector">
+            <h4>Select from database</h4>
+            <div class="control-group">
+                <label for="etalonPatternSelector">Etalon</label>
+                <div class="select-wrapper">
+                    <select id="etalonPatternSelector" disabled></select>
+                </div>
+            </div>
+            <div class="control-group">
+                <label for="measuredCollectionSelector">Measured</label>
+                <div class="select-wrapper">
+                    <select id="measuredCollectionSelector" disabled></select>
+                </div>
+            </div>
+        </div>
+        <div class="separator">OR</div>
+        <div class="raw-log-section">
+            <h4>Upload raw log file</h4>
+            <div class="drop-zone" id="dropZone">
+                <div class="drop-zone-content">
+                    <i class="fa-solid fa-upload"></i>
+                    <span class="drop-zone__prompt">Put file here or click to select</span>
+                </div>
+                <input type="file" id="logFileInput" class="drop-zone__input" accept=".log"/>
+            </div>
+            <div class="control-group">
+                <select id="logPatternSelector" disabled></select>
+            </div>
+        </div>
+    </div>
+</div>

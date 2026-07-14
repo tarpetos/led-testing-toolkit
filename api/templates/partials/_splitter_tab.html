@@ -1,0 +1,35 @@
+<div id="split-logs-tab" class="tab-content">
+    <div class="upload-section">
+        <h4>Split logs</h4>
+        <form id="split-logs-form">
+            <div class="control-group">
+                <label for="split-input-files">Input log file(s)</label>
+                <div class="drop-zone" id="split-drop-zone">
+                    <div class="drop-zone-content">
+                        <i class="fa-solid fa-upload"></i>
+                        <span class="drop-zone__prompt">Put files here or click to select</span>
+                    </div>
+                    <input type="file" id="split-input-files" class="drop-zone__input" accept=".log"
+                           multiple/>
+                </div>
+                <div id="split-file-list"></div>
+            </div>
+            <div class="control-group">
+                <label for="split-max-patterns">Max patterns per file</label>
+                <input type="number" id="split-max-patterns" value="1">
+            </div>
+            <div class="control-group">
+                <label for="split-start-pattern">Start pattern (Regex)</label>
+                <input type="text" id="split-start-pattern"
+                       value="(?:--- START INDICATION PATTERN \w+ ---|LED\d+=)">
+            </div>
+            <div class="control-group">
+                <label for="split-end-pattern">End pattern (Regex)</label>
+                <input type="text" id="split-end-pattern"
+                       value="(?:Indication absence time exceeded limit|Expected pattern \w+ is detected!|--- END INDICATION PATTERN \w+ ---)">
+            </div>
+            <button type="submit" class="btn">Split</button>
+        </form>
+        <div id="split-logs-output"></div>
+    </div>
+</div>

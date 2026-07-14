@@ -166,3 +166,12 @@ cython_debug/
 *.out
 
 .python-version
+
+# modules created for development purposes only
+*dev_*.py
+
+*.png
+*.jpg
+*.jpeg
+
+*.json
