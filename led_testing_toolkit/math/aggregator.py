@@ -20,7 +20,26 @@ if TYPE_CHECKING:
 
 
 class Aggregator:
+    """
+    Aggregates multiple records to create an etalon signal.
+
+    Attributes:
+        _records (list[Record]): The list of input records.
+        _interpolator (Interpolator): The interpolator instance.
+        _interpolated (list[tuple[ndarray, ndarray]]): The interpolated signals.
+        _etalon (dict[str, ndarray]): The computed etalon signal.
+
+    """
+
     def __init__(self, dataset: Dataset, interpolator: Interpolator) -> None:
+        """
+        Initializes the Aggregator.
+
+        Args:
+            dataset (Dataset): The dataset containing records to aggregate.
+            interpolator (Interpolator): The interpolator to use.
+
+        """
         self._records: list[Record] = dataset.records
         self._interpolator: Interpolator = interpolator
         self._interpolated: list[tuple[ndarray, ndarray]] = []
@@ -28,12 +47,20 @@ class Aggregator:
 
     @property
     def etalon(self) -> Record:
+        """
+        Gets the computed etalon.
+
+        Returns:
+            Record: The etalon record.
+
+        """
         if self._etalon:
             points = [Point(x=x, y=y) for x, y in zip(self._etalon["x"], self._etalon["y"], strict=False)]
             return Record(coordinates=points)
         return Record()
 
     async def _interpolate(self) -> None:
+        """Asynchronously interpolates the records."""
         self._interpolated.clear()
 
         tasks = []
@@ -51,6 +78,7 @@ class Aggregator:
             self._interpolated = await asyncio.gather(*tasks)
 
     async def _aggregate(self) -> None:
+        """Asynchronously aggregates the interpolated records."""
         if not self._interpolated:
             self._etalon = {}
             return
@@ -58,6 +86,7 @@ class Aggregator:
         await asyncio.to_thread(self._aggregate_sync)
 
     def _aggregate_sync(self) -> None:  # noqa: C901
+        """Synchronously aggregates the interpolated records."""
         if not self._interpolated:
             return
 
@@ -123,10 +152,24 @@ class Aggregator:
         self._etalon = {"x": final_x, "y": final_y}
 
     async def start(self) -> None:
+        """Starts the aggregation process."""
         await self._interpolate()
         await self._aggregate()
 
     def get_plots_base64(self, **kwargs) -> str:
+        """
+        Gets base64 encoded plot of the aggregation.
+
+        Args:
+            **kwargs: Plotting options.
+
+        Returns:
+            str: Base64 encoded string of the plot image.
+
+        Raises:
+            ValueError: If etalon is not available.
+
+        """
         if not self.etalon.coordinates:
             raise ValueError("Etalon is not available! Run start() method first!")
 
@@ -154,7 +197,17 @@ class Aggregator:
         plt.close(fig)
         return base64.b64encode(buf.getvalue()).decode("utf-8")
 
-    def build_plots(self, **kwargs) -> Path:
+    def build_plots(self, **kwargs) -> Path | None:
+        """
+        Builds and saves plots of the aggregation.
+
+        Args:
+            **kwargs: Plotting options including save_path.
+
+        Returns:
+            Path: The path to the saved plot, or None if save_path is not provided.
+
+        """
         plt.figure(figsize=(10, 6))
         colors = self.get_plot_colors()
 
@@ -177,14 +230,26 @@ class Aggregator:
         plt.grid(True)
         plt.tight_layout()
 
-        save_path = Path(kwargs.get("save_path"))
-        save_path.parent.mkdir(parents=True, exist_ok=True)
-        plt.savefig(save_path) if save_path else plt.show()
+        save_path_kw = kwargs.get("save_path")
+        if save_path_kw:
+            save_path = Path(save_path_kw)
+            save_path.parent.mkdir(parents=True, exist_ok=True)
+            plt.savefig(save_path)
+            plt.close()
+            return save_path
+        plt.show()
         plt.close()
-        return save_path
+        return None
 
     @staticmethod
     def get_plot_colors() -> cycle:
+        """
+        Gets an iterator over plot colors.
+
+        Returns:
+            cycle: An iterator over colors.
+
+        """
         cmaps = [mpl.colormaps.get_cmap(name) for name in ["tab10", "Set3", "Paired"]]
         num_colors_per_cmap = 7
         hex_colors = []

@@ -13,27 +13,70 @@ class Pattern(ABC):
     """Abstract base class for all LED patterns."""
 
     def __init__(self, led_ids: list[int], start_time: float, end_time: float):
+        """
+        Initialize the Pattern.
+
+        Args:
+            led_ids: List of LED IDs.
+            start_time: Start time.
+            end_time: End time.
+
+        """
         self.led_ids = led_ids
         self.start_time = start_time
         self.end_time = end_time
         self.led_names = {f"LED{i}" for i in self.led_ids}
 
     def get_active_leds(self) -> set[str]:
+        """
+        Get active LEDs.
+
+        Returns:
+            Set of LED names.
+
+        """
         return self.led_names
 
     @abstractmethod
     def update(self, elapsed_s: float) -> dict[str, dict[str, float | list[int]]]:
-        pass
+        """
+        Update pattern.
+
+        Args:
+            elapsed_s: Elapsed seconds.
+
+        Returns:
+            Dict of LED states.
+
+        """
+        # pragma: no cover
 
 
 class FadePattern(Pattern):
     """A pattern that fades a color in and out over a duration."""
 
     def __init__(self, config: FadePatternConfig):
+        """
+        Initialize FadePattern.
+
+        Args:
+            config: Config object.
+
+        """
         super().__init__(config.led_ids, config.start_time, config.end_time)
         self.config = config
 
     def update(self, elapsed_s: float) -> dict[str, dict[str, float | list[int]]]:
+        """
+        Update fade pattern.
+
+        Args:
+            elapsed_s: Elapsed time.
+
+        Returns:
+            States of LEDs.
+
+        """
         states = {}
         if not (self.start_time <= elapsed_s < self.end_time):
             return states
@@ -61,10 +104,27 @@ class ChaserPattern(Pattern):
     """A 'larson scanner' pattern where a pulse of light moves across LEDs."""
 
     def __init__(self, config: ChaserPatternConfig) -> None:
+        """
+        Initialize ChaserPattern.
+
+        Args:
+            config: Chaser config.
+
+        """
         super().__init__(config.led_ids, config.start_time, config.end_time)
         self.config = config
 
     def update(self, elapsed_s: float) -> dict[str, dict[str, float | list[int]]]:
+        """
+        Update chaser pattern.
+
+        Args:
+            elapsed_s: Elapsed time.
+
+        Returns:
+            States of LEDs.
+
+        """
         states = {}
         if not (self.start_time <= elapsed_s < self.end_time):
             return states
@@ -87,10 +147,27 @@ class KeyframesPattern(Pattern):
     """A pattern that interpolates between a series of defined color keyframes."""
 
     def __init__(self, config: KeyframesPatternConfig) -> None:
+        """
+        Initialize KeyframesPattern.
+
+        Args:
+            config: Keyframes config.
+
+        """
         super().__init__(config.led_ids, config.start_time, config.end_time)
         self.config = config
 
     def update(self, elapsed_s: float) -> dict[str, dict[str, float | list[int]]]:
+        """
+        Update keyframes pattern.
+
+        Args:
+            elapsed_s: Elapsed time.
+
+        Returns:
+            States of LEDs.
+
+        """
         states = {}
         if not (self.start_time <= elapsed_s < self.end_time) or not self.config.keyframes:
             return states
@@ -120,12 +197,32 @@ class SimplePattern(Pattern):
     """A simple pattern for lighting all LEDs at once or sequentially."""
 
     def __init__(self, num_leds: int, color: Color, fade_s: float, sequence: str) -> None:
+        """
+        Initialize SimplePattern.
+
+        Args:
+            num_leds: Number of LEDs.
+            color: The color.
+            fade_s: Fade time.
+            sequence: Sequence type.
+
+        """
         super().__init__(list(range(1, num_leds + 1)), 0.0, float("inf"))
         self.color = color
         self.fade_s = fade_s
         self.sequence = sequence
 
     def update(self, elapsed_s: float) -> dict[str, dict[str, float | list[int]]]:
+        """
+        Update simple pattern.
+
+        Args:
+            elapsed_s: Elapsed time.
+
+        Returns:
+            States of LEDs.
+
+        """
         states = {}
         for led_id in self.led_ids:
             start_time = 0.0 if self.sequence == "all_at_once" else (led_id - 1) * self.fade_s

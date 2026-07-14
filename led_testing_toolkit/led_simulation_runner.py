@@ -24,7 +24,19 @@ from led_testing_toolkit.utils.collection_name import ETALONS_COLLECTION_SUFFIX
 
 
 class ReplayPattern(Pattern):
+    """A pattern that replays LED sequences based on normalized mathematical data."""
+
     def __init__(self, pattern_data: NormalizedLedData) -> None:
+        """
+        Initializes the ReplayPattern instance.
+
+        Args:
+            pattern_data: The normalized LED data to replay.
+
+        Raises:
+            ValueError: If the pattern data does not contain any LED information.
+
+        """
         all_led_names = list(pattern_data.keys())
         if not all_led_names:
             raise ValueError("Pattern data does not contain any LED information!")
@@ -42,6 +54,13 @@ class ReplayPattern(Pattern):
         self._prepare_interpolation_data(pattern_data)
 
     def _prepare_interpolation_data(self, pattern_data: NormalizedLedData) -> None:
+        """
+        Prepares internal interpolation data arrays based on the pattern data.
+
+        Args:
+            pattern_data: Normalized LED data containing records.
+
+        """
         self._prepped_data = {}
         for led_name, channels in pattern_data.items():
             self._prepped_data[led_name] = {}
@@ -60,6 +79,16 @@ class ReplayPattern(Pattern):
                     self._prepped_data[led_name][channel] = (z_vals, y_vals, x_vals)
 
     def update(self, elapsed_s: float) -> dict[str, dict[str, float | list[int]]]:
+        """
+        Calculates the state of each LED at a given elapsed time.
+
+        Args:
+            elapsed_s: The elapsed time in seconds.
+
+        Returns:
+            A dictionary containing the calculated LED states.
+
+        """
         states = {}
         if not (self.start_time <= elapsed_s < self.end_time and self.end_time > 0):
             return states
@@ -92,11 +121,31 @@ class ReplayPattern(Pattern):
 
 
 class SimulationRunner:
+    """Runner for executing LED simulations based on parsed logs or database entries."""
+
     def __init__(self, args: Namespace, logger: Logger) -> None:
+        """
+        Initializes the SimulationRunner instance.
+
+        Args:
+            args: Command line arguments namespace containing configuration.
+            logger: Logger instance to be used for logging.
+
+        """
         self.args = args
         self.logger = logger
 
     def _convert_db_doc_to_normalized_data(self, doc: dict[str, Any] | Mapping[str, Any]) -> NormalizedLedData:  # noqa: C901
+        """
+        Converts a database document into normalized LED data format.
+
+        Args:
+            doc: The database document to convert.
+
+        Returns:
+            Normalized LED data.
+
+        """
         led_data = {}
         led_identifier = "LED"
         first_abs_time = float("inf")
@@ -148,6 +197,16 @@ class SimulationRunner:
         return led_data
 
     def _adapt_parser_data_for_replay(self, pattern_data: NormalizedLedData) -> NormalizedLedData:  # noqa: C901, PLR0912
+        """
+        Adapts parsed pattern data for replay by adjusting absolute and relative times.
+
+        Args:
+            pattern_data: The original parsed pattern data.
+
+        Returns:
+            Adapted normalized LED data.
+
+        """
         adapted_data = {}
         first_abs_time = float("inf")
 
@@ -197,6 +256,13 @@ class SimulationRunner:
         return adapted_data
 
     async def _get_patterns_from_source(self) -> list[NormalizedLedData]:
+        """
+        Retrieves patterns from the configured source (log or db).
+
+        Returns:
+            A list of normalized LED data patterns.
+
+        """
         if self.args.source_type == "log":
             return await self._get_patterns_from_log()
         if self.args.source_type == "db":
@@ -204,6 +270,13 @@ class SimulationRunner:
         return []
 
     async def _get_patterns_from_log(self) -> list[NormalizedLedData]:
+        """
+        Retrieves patterns from a log file source.
+
+        Returns:
+            A list of normalized LED data patterns extracted from the log.
+
+        """
         if not self.args.filepath.exists():
             self.logger.error(f"Log file not found: {self.args.filepath}")
             sys.exit(1)
@@ -216,6 +289,13 @@ class SimulationRunner:
         return patterns
 
     async def _get_patterns_from_db(self) -> list[NormalizedLedData]:
+        """
+        Retrieves patterns from a database collection.
+
+        Returns:
+            A list of normalized LED data patterns retrieved from the database.
+
+        """
         is_etalon_source = self.args.collection.upper().endswith(ETALONS_COLLECTION_SUFFIX)
         db_type = "etalon" if is_etalon_source else "measured"
 
@@ -260,6 +340,13 @@ class SimulationRunner:
         return patterns_to_process
 
     async def run(self) -> list[str]:
+        """
+        Runs the simulation process based on the provided configuration.
+
+        Returns:
+            A list of paths to the generated output log files.
+
+        """
         base_name = ""
         if self.args.source_type == "log":
             base_name = self.args.filepath.stem

@@ -1,3 +1,5 @@
+"""Type aliases used throughout the led_testing_toolkit."""
+
 from __future__ import annotations
 
 from datetime import datetime

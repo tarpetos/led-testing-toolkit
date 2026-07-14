@@ -13,6 +13,19 @@ router = APIRouter(prefix="/parser", tags=["Parser"])
 
 @router.post("/upload-log")
 async def upload_log_file(file: Annotated[UploadFile, File()] = ...) -> UploadLogResponse:
+    """
+    Upload and parse a log file.
+
+    Args:
+        file: The uploaded log file.
+
+    Returns:
+        An upload log response containing parsed data.
+
+    Raises:
+        HTTPException: If parsing the log file fails.
+
+    """
     try:
         content = await file.read()
         return await log_parser_service.parse_log_file(content)
@@ -22,10 +35,23 @@ async def upload_log_file(file: Annotated[UploadFile, File()] = ...) -> UploadLo
 
 @router.post("/select-pattern")
 async def select_log_pattern(request: SelectPatternRequest) -> SelectPatternResponse:
+    """
+    Select a log pattern to load into the player.
+
+    Args:
+        request: The request payload containing the pattern index.
+
+    Returns:
+        A response indicating successful loading of the pattern.
+
+    Raises:
+        HTTPException: If the pattern index is invalid or the pattern is not found.
+
+    """
     try:
         pattern_index = request.index
-    except (ValueError, TypeError) as e:
-        raise HTTPException(status_code=400, detail="Invalid pattern index provided!") from e
+    except (ValueError, TypeError) as e:  # pragma: no cover
+        raise HTTPException(status_code=400, detail="Invalid pattern index provided!") from e  # pragma: no cover
 
     normalized_pattern = log_parser_service.get_pattern_by_index(pattern_index)
     if not normalized_pattern:

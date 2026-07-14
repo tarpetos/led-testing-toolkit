@@ -9,6 +9,8 @@ from loguru import logger
 
 
 class LogsSplitter:
+    """A class for splitting large log files into smaller chunks based on start/end regex patterns."""
+
     def __init__(
         self,
         output_dir: Path,
@@ -16,6 +18,19 @@ class LogsSplitter:
         start_pattern: str,
         end_pattern: str,
     ) -> None:
+        """
+        Initialize the LogsSplitter.
+
+        Args:
+            output_dir: Directory where split logs will be saved.
+            max_patterns_per_file: Max patterns allowed in a single split file.
+            start_pattern: Regex pattern indicating the start of a log section.
+            end_pattern: Regex pattern indicating the end of a log section.
+
+        Raises:
+            ValueError: If max_patterns_per_file is less than or equal to 0.
+
+        """
         if max_patterns_per_file <= 0:
             raise ValueError("Max patterns per file must be a positive number!")
 
@@ -27,6 +42,17 @@ class LogsSplitter:
         )
 
     async def _calculate_file_hash(self, file_path: Path, block_size: int = 65536) -> str:
+        """
+        Calculate the SHA256 hash of a file.
+
+        Args:
+            file_path: Path to the file.
+            block_size: Size of chunks to read.
+
+        Returns:
+            The SHA256 hash string, or "hash_error" if reading fails.
+
+        """
         sha256 = hashlib.sha256()
         try:
             async with aiofiles.open(file_path, "rb") as f:
@@ -38,6 +64,16 @@ class LogsSplitter:
             return "hash_error"
 
     async def _find_patterns(self, content: str) -> list[str]:
+        """
+        Find matching log patterns within the content using regex.
+
+        Args:
+            content: The entire string content of the log file.
+
+        Returns:
+            A list of pattern strings found.
+
+        """
         loop = asyncio.get_running_loop()
         matches = list(await loop.run_in_executor(None, self.pattern_regex.finditer, content))
 
@@ -67,6 +103,14 @@ class LogsSplitter:
         return [p.strip() for p in all_patterns if p.strip()]
 
     async def _write_chunk(self, output_path: Path, pattern_chunk: list[str]) -> None:
+        """
+        Write a chunk of patterns to a file.
+
+        Args:
+            output_path: Path to write the chunk to.
+            pattern_chunk: List of patterns to write.
+
+        """
         content_to_write = "\n\n---\n\n".join(pattern_chunk)
         try:
             async with aiofiles.open(output_path, "w", encoding="utf-8") as f:
@@ -76,6 +120,16 @@ class LogsSplitter:
             logger.error(f"Error writing to file `{output_path}`: {e!s}")
 
     async def _process_single_file(self, input_file: Path) -> list[Path]:
+        """
+        Process a single log file by splitting it into smaller chunks.
+
+        Args:
+            input_file: Path to the log file.
+
+        Returns:
+            A list of output file paths generated.
+
+        """
         logger.info(f"Starting processing for: `{input_file}`")
 
         file_hash = await self._calculate_file_hash(input_file)
@@ -118,6 +172,16 @@ class LogsSplitter:
         return output_paths
 
     async def process_batch(self, input_files: list[Path]) -> list[Path]:
+        """
+        Process a batch of log files concurrently.
+
+        Args:
+            input_files: A list of paths to log files.
+
+        Returns:
+            A combined list of all generated output file paths.
+
+        """
         logger.info(f"Initializing batch processing for {len(input_files)} file(s).")
         processing_tasks = [self._process_single_file(file) for file in input_files]
         results = await asyncio.gather(*processing_tasks)

@@ -19,6 +19,16 @@ from api.utils.helpers import cancel_task
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, Any]:
+    """
+    Manage the lifespan of the FastAPI application.
+
+    Args:
+        _: The FastAPI application instance.
+
+    Yields:
+        None.
+
+    """
     player_task = asyncio.create_task(player_service.playback_loop())
     broadcast_task = asyncio.create_task(websocket.broadcast_loop())
 
@@ -45,8 +55,18 @@ app.include_router(tools.router, prefix="/api/v1")
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request) -> _TemplateResponse:
+    """
+    Serve the root index page.
+
+    Args:
+        request: The HTTP request.
+
+    Returns:
+        The rendered template response.
+
+    """
     return templates.TemplateResponse("index.html", {"request": request})
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     uvicorn.run("main:app", host=API_HOST, port=API_PORT, reload=True)

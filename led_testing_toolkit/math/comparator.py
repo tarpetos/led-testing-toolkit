@@ -18,11 +18,34 @@ if TYPE_CHECKING:
 
 
 class WeakSignalWarning(UserWarning):
-    pass
+    """Warning raised when the measured signal is too weak."""
 
 
 class Comparator:
+    """
+    Compares measured signals against etalon signals.
+
+    Attributes:
+        _etalon (Record): The etalon record.
+        _measured (Record): The measured record.
+        _interpolator (Interpolator): The interpolator instance.
+        _aligned_data (dict[str, Record]): Aligned etalon and measured records.
+        _accuracy (float): The calculated accuracy.
+        _is_weak (bool): Whether the measured signal is considered weak.
+        _is_checked (bool): Whether the signal strength has been checked.
+
+    """
+
     def __init__(self, etalon: Record, measured: Record, interpolator: Interpolator) -> None:
+        """
+        Initializes the Comparator.
+
+        Args:
+            etalon (Record): The reference (etalon) record.
+            measured (Record): The measured record.
+            interpolator (Interpolator): The interpolator to use for alignment.
+
+        """
         self._etalon = etalon
         self._measured = measured
         self._interpolator = interpolator
@@ -32,6 +55,7 @@ class Comparator:
         self._is_checked = False
 
     def _check_signal_strength(self) -> None:
+        """Checks if the measured signal is weak."""
         if not self._measured.coordinates:
             self._is_weak = True
             self._is_checked = True
@@ -49,6 +73,7 @@ class Comparator:
         self._is_checked = True
 
     async def _align_measured_with_etalons(self) -> None:
+        """Asynchronously aligns the measured data with the etalon data."""
         etalon_times = np.array([point.x for point in self._etalon.coordinates], dtype=float)
         etalon_y = np.array([point.y for point in self._etalon.coordinates], dtype=float)
 
@@ -73,6 +98,16 @@ class Comparator:
         x_new_relative: ndarray,
         y_measured: ndarray,
     ) -> None:
+        """
+        Synchronously aligns the data.
+
+        Args:
+            etalon_times (ndarray): Etalon time coordinates.
+            etalon_y (ndarray): Etalon y coordinates.
+            x_new_relative (ndarray): Relative new x coordinates.
+            y_measured (ndarray): Measured y coordinates.
+
+        """
         y_measured_aligned = np.interp(etalon_times, x_new_relative, y_measured, left=np.nan, right=np.nan)
         etalon_points = [Point(x=x, y=y) for x, y in zip(etalon_times, etalon_y, strict=False)]
         measured_points = [Point(x=x, y=y) for x, y in zip(etalon_times, y_measured_aligned, strict=False)]
@@ -82,6 +117,13 @@ class Comparator:
         }
 
     async def _compare(self) -> float:
+        """
+        Asynchronously compares the aligned data.
+
+        Returns:
+            float: The accuracy percentage.
+
+        """
         etalon_y = np.array([point.y for point in self._aligned_data["etalon"].coordinates], dtype=float)
         measured_y = np.array([point.y for point in self._aligned_data["measured"].coordinates], dtype=float)
 
@@ -93,6 +135,17 @@ class Comparator:
         return self._accuracy
 
     def _compare_sync(self, etalon_y: ndarray, measured_y: ndarray) -> float:
+        """
+        Synchronously compares the aligned data.
+
+        Args:
+            etalon_y (ndarray): Aligned etalon y values.
+            measured_y (ndarray): Aligned measured y values.
+
+        Returns:
+            float: The combined accuracy percentage.
+
+        """
         mae_accuracy = self._calculate_mae_accuracy(etalon_y=etalon_y, measured_y=measured_y)
         correlation_accuracy = self._calculate_correlation_accuracy(etalon_y=etalon_y, measured_y=measured_y)
         fft_accuracy = self._calculate_fft_accuracy(etalon_y=etalon_y, measured_y=measured_y)
@@ -101,6 +154,17 @@ class Comparator:
         return max(0.0, total_accuracy)
 
     def _calculate_mae_accuracy(self, etalon_y: ndarray, measured_y: ndarray) -> float:
+        """
+        Calculates accuracy based on Mean Absolute Error.
+
+        Args:
+            etalon_y (ndarray): Aligned etalon y values.
+            measured_y (ndarray): Aligned measured y values.
+
+        Returns:
+            float: Accuracy percentage based on MAE.
+
+        """
         valid_indices = ~np.isnan(measured_y)
         if not np.any(valid_indices):
             return 0.0
@@ -111,6 +175,17 @@ class Comparator:
         return max(0.0, accuracy)
 
     def _calculate_correlation_accuracy(self, etalon_y: ndarray, measured_y: ndarray) -> float:
+        """
+        Calculates accuracy based on correlation.
+
+        Args:
+            etalon_y (ndarray): Aligned etalon y values.
+            measured_y (ndarray): Aligned measured y values.
+
+        Returns:
+            float: Accuracy percentage based on correlation.
+
+        """
         valid_indices = ~np.isnan(measured_y)
         if np.sum(valid_indices) < 2:
             return 0.0
@@ -123,6 +198,17 @@ class Comparator:
         return max(0.0, correlation) * 100
 
     def _calculate_fft_accuracy(self, etalon_y: ndarray, measured_y: ndarray) -> float:
+        """
+        Calculates accuracy based on FFT magnitude differences.
+
+        Args:
+            etalon_y (ndarray): Aligned etalon y values.
+            measured_y (ndarray): Aligned measured y values.
+
+        Returns:
+            float: Accuracy percentage based on FFT magnitude.
+
+        """
         valid_indices = ~np.isnan(measured_y)
         if not np.any(valid_indices):
             return 0.0
@@ -143,6 +229,16 @@ class Comparator:
 
     @staticmethod
     def _calculate_fft(y: ndarray) -> tuple[ndarray, ndarray]:
+        """
+        Calculates FFT and returns frequencies and magnitudes.
+
+        Args:
+            y (ndarray): The signal data.
+
+        Returns:
+            tuple[ndarray, ndarray]: Frequencies and magnitudes.
+
+        """
         n = len(y)
         if n == 0:
             return np.array([]), np.array([])
@@ -152,6 +248,13 @@ class Comparator:
         return xf, magnitude
 
     async def start(self) -> float:
+        """
+        Starts the comparison process.
+
+        Returns:
+            float: The accuracy percentage, or -1.0 if the signal is too weak.
+
+        """
         if not self._is_checked:
             await asyncio.to_thread(self._check_signal_strength)
 
@@ -163,6 +266,19 @@ class Comparator:
         return await self._compare()
 
     def build_plots(self, **kwargs) -> str:
+        """
+        Builds plots comparing the signals.
+
+        Args:
+            **kwargs: Plotting options (figsize, title, etalon_label, etc.).
+
+        Returns:
+            str: Base64 encoded string of the plot image.
+
+        Raises:
+            ValueError: If aligned data is not available.
+
+        """
         if not self._is_checked:
             self._check_signal_strength()
 

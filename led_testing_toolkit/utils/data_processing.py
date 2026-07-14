@@ -34,6 +34,16 @@ mpl.use("Agg")
 
 
 def make_sequence(obj: object) -> Sequence:
+    """
+    Convert an object to a sequence.
+
+    Args:
+        obj: The object to convert.
+
+    Returns:
+        The sequence object.
+
+    """
     string_type: bool = isinstance(obj, (str, bytes))
     return obj if isinstance(obj, Sequence) and not string_type else (obj,)
 
@@ -41,6 +51,16 @@ def make_sequence(obj: object) -> Sequence:
 async def extract_led_rgb_data(
     records: LedData,
 ) -> NormalizedLedData:
+    """
+    Extract normalized LED RGB data from records.
+
+    Args:
+        records: A single or a list of LedData records.
+
+    Returns:
+        The normalized LED data, mapping LEDs to 'r', 'g', 'b' coordinates.
+
+    """
     records = make_sequence(records)
     led_data = {}
 
@@ -80,6 +100,17 @@ def convert_etalon_to_db_format(
     etalons_data: NormalizedLedData,
     abs_avg_times: dict[str, list[float]],
 ) -> EtalonDbFormat:
+    """
+    Convert normalized etalon data to database format.
+
+    Args:
+        etalons_data: The normalized etalon data.
+        abs_avg_times: The computed average absolute times.
+
+    Returns:
+        The formatted etalon dictionary ready for DB storage.
+
+    """
     etalon_dict = {}
     for led, rgb_data in etalons_data.items():
         if etalon_dict.get(led) is None:
@@ -103,6 +134,16 @@ def convert_etalon_to_db_format(
 
 
 def compute_average_abs_times(records: list[Record]) -> list[float]:
+    """
+    Compute the average absolute times from records.
+
+    Args:
+        records: A list of Records.
+
+    Returns:
+        A list of average absolute times.
+
+    """
     abs_time_records = [[point.z for point in record.coordinates] for record in records]
     max_length = max(len(abs_times) for abs_times in abs_time_records)
     padded_records = [abs_times + [np.nan] * (max_length - len(abs_times)) for abs_times in abs_time_records]
@@ -117,6 +158,19 @@ async def read_measured(
     get_random: bool = False,
     record_id: str | None = None,
 ) -> NormalizedLedData:
+    """
+    Read measured LED data from the database.
+
+    Args:
+        name: The name of the collection to read from.
+        db_name: The MongoDB database name.
+        get_random: If True, selects a random record.
+        record_id: Specific record ID to retrieve.
+
+    Returns:
+        Normalized LED data extracted from the record(s).
+
+    """
     measure_collection_name = validate_measured_collection_name(name)
 
     async with MongoDbConnector(db_name) as connector:
@@ -138,6 +192,21 @@ async def read_etalon(
     *,
     db_name: str | None = os.getenv("MONGO_DB_NAME"),
 ) -> NormalizedLedData:
+    """
+    Read etalon LED data from the database.
+
+    Args:
+        pattern_name: The expected pattern name.
+        etalon_collection_name: The etalon collection name.
+        db_name: The MongoDB database name.
+
+    Returns:
+        Normalized LED data extracted from the etalon.
+
+    Raises:
+        ValueError: If no etalon data is found.
+
+    """
     etalon_collection_name = validate_etalons_collection_name(etalon_collection_name)
     async with MongoDbConnector(db_name) as connector:
         await connector.use_collection(etalon_collection_name)
@@ -154,6 +223,17 @@ async def generate_etalon(
     *,
     db_name: str | None = os.getenv("MONGO_DB_NAME"),
 ) -> tuple[str, dict[str, dict[str, str]]]:
+    """
+    Generate an etalon from a measured collection.
+
+    Args:
+        measure_collection_name: The measured collection name.
+        db_name: The MongoDB database name.
+
+    Returns:
+        A tuple containing the etalon collection name and generated plots.
+
+    """
     device_name, etalon_record_key = parse_collection_name(measure_collection_name)
     etalon_collection_name = validate_etalons_collection_name(f"{device_name}-{ETALONS_COLLECTION_SUFFIX}")
 
@@ -191,6 +271,19 @@ async def make_comparison(
     led: str,
     color: str,
 ) -> tuple[float, str]:
+    """
+    Compare a single measured record against an etalon record.
+
+    Args:
+        etalon: The etalon record.
+        measured: The measured record.
+        led: The LED identifier.
+        color: The color channel (e.g., 'r', 'g', 'b').
+
+    Returns:
+        A tuple with the computed accuracy and base64 encoded plot string.
+
+    """
     comparator = Comparator(etalon, measured, Interpolator(lower_bound=0, upper_bound=255))
     accuracy = await comparator.start()
     plot = comparator.build_plots(
@@ -205,6 +298,17 @@ async def make_comparisons(
     normalized_etalon_data: NormalizedLedData,
     normalized_measured_data: NormalizedLedData,
 ) -> ComparisonResults:
+    """
+    Compare fully normalized measured data against normalized etalon data.
+
+    Args:
+        normalized_etalon_data: The etalon data.
+        normalized_measured_data: The measured data.
+
+    Returns:
+        A dictionary containing accuracy and plot information for all comparisons.
+
+    """
     comparison_results = {}
     for led, rgb_data in normalized_etalon_data.items():
         comparison_results[led] = {}

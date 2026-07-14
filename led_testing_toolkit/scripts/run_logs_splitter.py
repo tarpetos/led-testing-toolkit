@@ -10,6 +10,20 @@ from led_testing_toolkit.utils.logs_splitter import LogsSplitter
 async def split_logs_main(
     input_files: list[Path], max_patterns: int, output_dir: Path, start_pattern: str, end_pattern: str
 ) -> list[Path]:
+    """
+    Execute the batch log splitting logic.
+
+    Args:
+        input_files: A list of file paths to process.
+        max_patterns: Maximum number of patterns per split file.
+        output_dir: Directory where the split files will be saved.
+        start_pattern: Regex pattern indicating the start of a block.
+        end_pattern: Regex pattern indicating the end of a block.
+
+    Returns:
+        A list of output file paths generated during the process.
+
+    """
     logger.info(f"Log splitter configured. Processing `{len(input_files)}` file(s).")
 
     try:
@@ -33,6 +47,7 @@ async def split_logs_main(
 
 
 async def main() -> None:
+    """Main entry point for running the log splitter from command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Asynchronously splits one or more log files into smaller chunks based on patterns.",
         formatter_class=argparse.RawTextHelpFormatter,

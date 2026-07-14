@@ -8,11 +8,22 @@ from led_testing_toolkit.led_simulation_runner import SimulationRunner
 
 
 async def generate_indication_from_source_main(args: argparse.Namespace) -> list[str]:
+    """
+    Execute the simulation runner using a given source.
+
+    Args:
+        args: Parsed command-line arguments namespace.
+
+    Returns:
+        A list of generated output file paths.
+
+    """
     runner = SimulationRunner(args, logger)
     return await runner.run()
 
 
 async def main() -> None:
+    """Main entry point for generating indication from a source (log or DB)."""
     parser = argparse.ArgumentParser(
         description="Generator for LED indication simulations from existing data.",
         formatter_class=argparse.RawTextHelpFormatter,

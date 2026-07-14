@@ -7,7 +7,10 @@ from led_testing_toolkit.mongo_db_connector import MongoDbConnector
 
 
 class PlayerService:
+    """Service for managing LED pattern playback state and logic."""
+
     def __init__(self):
+        """Initialize the PlayerService with default state."""
         self.pattern_data: dict[str, list] | None = None
         self.is_playing: bool = False
         self.playback_start_time: float = 0.0
@@ -18,6 +21,7 @@ class PlayerService:
         self.total_duration: float = 0.0
 
     def _reset_player_state_unsafe(self) -> None:
+        """Reset the player state to defaults without acquiring the lock."""
         self.is_playing = False
         self.pattern_data = None
         self.playback_start_time = 0.0
@@ -27,6 +31,7 @@ class PlayerService:
         self.total_duration = 0.0
 
     def _calculate_pattern_times(self) -> None:
+        """Calculate the start time and total duration of the current pattern."""
         if not self.pattern_data:
             self.playback_start_abs_time = 0.0
             self.total_duration = 0.0
@@ -52,6 +57,14 @@ class PlayerService:
             self.total_duration = 0.0
 
     async def load_etalon_pattern(self, collection_name: str, pattern_name: str) -> None:
+        """
+        Load an etalon pattern from the database.
+
+        Args:
+            collection_name (str): The name of the collection.
+            pattern_name (str): The name of the pattern to load.
+
+        """
         async with self.lock:
             self._reset_player_state_unsafe()
             async with MongoDbConnector() as connector:
@@ -62,6 +75,13 @@ class PlayerService:
                 self._calculate_pattern_times()
 
     async def load_measured_pattern(self, collection_name: str) -> None:
+        """
+        Load a random measured pattern from the database.
+
+        Args:
+            collection_name (str): The name of the collection.
+
+        """
         async with self.lock:
             self._reset_player_state_unsafe()
             async with MongoDbConnector() as connector:
@@ -72,6 +92,13 @@ class PlayerService:
                 self._calculate_pattern_times()
 
     def _update_led_states_for_time(self, current_time: float) -> None:
+        """
+        Update the internal LED states based on the current playback time.
+
+        Args:
+            current_time (float): The current playback time in seconds.
+
+        """
         if not self.pattern_data:
             self._current_led_states = {}
             return
@@ -99,6 +126,7 @@ class PlayerService:
         self._current_led_states = states
 
     async def playback_loop(self) -> None:
+        """Continuous asynchronous loop to handle playback timing and state updates."""
         while True:
             with suppress(Exception):
                 async with self.lock:
@@ -115,6 +143,7 @@ class PlayerService:
             await asyncio.sleep(0.01)
 
     async def resume(self) -> None:
+        """Resume playback of the current pattern."""
         async with self.lock:
             if not self.is_playing and self.pattern_data:
                 if self.paused_elapsed_time >= self.total_duration:
@@ -123,16 +152,25 @@ class PlayerService:
                 self.playback_start_time = time.time() - self.paused_elapsed_time
 
     async def pause(self) -> None:
+        """Pause playback of the current pattern."""
         async with self.lock:
             if self.is_playing:
                 self.is_playing = False
                 self.paused_elapsed_time = time.time() - self.playback_start_time
 
     async def stop(self) -> None:
+        """Stop playback and reset the player state."""
         async with self.lock:
             self._reset_player_state_unsafe()
 
     async def seek_to_time(self, seek_time: float) -> None:
+        """
+        Seek to a specific time in the pattern playback.
+
+        Args:
+            seek_time (float): The time in seconds to seek to.
+
+        """
         async with self.lock:
             if not self.pattern_data:
                 return
@@ -145,6 +183,13 @@ class PlayerService:
             self._update_led_states_for_time(safe_seek_time)
 
     def get_state(self) -> PlayerUpdate:
+        """
+        Get the current state of the player.
+
+        Returns:
+            PlayerUpdate: The current status and LED states.
+
+        """
         status = PlayerStatus(
             has_pattern=self.pattern_data is not None,
             is_playing=self.is_playing,
@@ -163,6 +208,13 @@ class PlayerService:
         return PlayerUpdate(status=status, leds=self._current_led_states)
 
     async def load_raw_pattern_data(self, pattern_data: dict) -> None:
+        """
+        Load raw pattern data into the player.
+
+        Args:
+            pattern_data (dict): The raw pattern data dictionary.
+
+        """
         async with self.lock:
             self._reset_player_state_unsafe()
             if pattern_data and isinstance(pattern_data, dict):

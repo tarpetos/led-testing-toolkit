@@ -8,6 +8,13 @@ from led_testing_toolkit.utils.make_indication_comparison import (
 
 
 async def main() -> None:
+    """
+    Main entry point for comparing a randomly selected measured pattern with an etalon.
+
+    This function parses command-line arguments to obtain the measured collection name,
+    etalon device, and etalon pattern. It then reads the measured data and compares it
+    against the etalon, displaying the comparison results.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-mc",

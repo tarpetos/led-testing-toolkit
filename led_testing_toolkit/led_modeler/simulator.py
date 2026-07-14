@@ -12,6 +12,16 @@ class PhotoresistorSimulator:
     """
 
     def __init__(self, led_ids: list[str], noise_level: float, lag: float, reporting_chance: float) -> None:
+        """
+        Initializes the PhotoresistorSimulator.
+
+        Args:
+            led_ids: List of LED IDs to simulate.
+            noise_level: The standard deviation of the Gaussian noise to add.
+            lag: The lag factor to apply to readings.
+            reporting_chance: The probability of a reading being reported.
+
+        """
         self.led_ids = led_ids
         self.noise_level = noise_level
         self.lag = lag

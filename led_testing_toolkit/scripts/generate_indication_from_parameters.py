@@ -70,6 +70,16 @@ def get_all_led_ids(patterns: list[Pattern]) -> list[str]:
 
 
 async def generate_indication_from_parameters_main(args: Namespace) -> str:
+    """
+    Execute the indication generator process based on parsed CLI arguments.
+
+    Args:
+        args: Parsed command-line arguments namespace.
+
+    Returns:
+        The output file path.
+
+    """
     config = AppConfig(**vars(args))
 
     logger = configure_logger(config.output_file, "LedGenerator")
@@ -96,6 +106,7 @@ async def generate_indication_from_parameters_main(args: Namespace) -> str:
 
 
 async def main() -> None:
+    """Main entry point for the parameter-based indication generation script."""
     parser = argparse.ArgumentParser(
         description="Photoresistor-simulated LED Indication Generator.",
         formatter_class=argparse.RawTextHelpFormatter,

@@ -8,6 +8,18 @@ async def make_indication_comparison_results(
     etalon_device: str,
     etalon_pattern: str,
 ) -> dict:
+    """
+    Compare measured data against an etalon and return structured results.
+
+    Args:
+        measured_data: Normalized data of measured LEDs.
+        etalon_device: The etalon device name.
+        etalon_pattern: The etalon pattern name.
+
+    Returns:
+        A dictionary containing plots, accuracies for each LED and color channel, and an overall accuracy.
+
+    """
     etalon_device, etalon_pattern = etalon_device.upper(), etalon_pattern.upper()
 
     normalized_etalon_data = await read_etalon(etalon_pattern, f"{etalon_device}-{ETALONS_COLLECTION_SUFFIX}")

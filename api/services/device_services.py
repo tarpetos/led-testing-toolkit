@@ -8,8 +8,17 @@ from led_testing_toolkit.utils.collection_name import (
 
 
 class DeviceService:
+    """Service class for managing LED device data and patterns."""
+
     @staticmethod
     async def get_all_devices_data() -> dict:
+        """
+        Retrieves data for all available LED devices.
+
+        Returns:
+            dict: A dictionary mapping device names to their etalon and measured collection names.
+
+        """
         devices_data = defaultdict(lambda: {"etalon_collection": None, "measured_collections": []})
 
         async with MongoDbConnector() as connector:
@@ -28,6 +37,16 @@ class DeviceService:
 
     @staticmethod
     async def get_measured_records(collection_name: str) -> list[str]:
+        """
+        Get measured records for a specific collection.
+
+        Args:
+            collection_name (str): The name of the collection.
+
+        Returns:
+            list[str]: A list of record IDs as strings.
+
+        """
         try:
             async with MongoDbConnector() as connector:
                 await connector.use_collection(collection_name, auto_create=False)
@@ -38,6 +57,16 @@ class DeviceService:
 
     @staticmethod
     async def get_etalon_patterns(etalon_collection: str) -> list[str]:
+        """
+        Get etalon patterns for a specific etalon collection.
+
+        Args:
+            etalon_collection (str): The name of the etalon collection.
+
+        Returns:
+            list[str]: A list of pattern IDs as strings.
+
+        """
         async with MongoDbConnector() as connector:
             await connector.use_collection(etalon_collection, auto_create=False)
             patterns = await connector.read_field("_id")

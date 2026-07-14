@@ -33,6 +33,16 @@ class LedParser:
         led_identifier: str = "LED",
         logger: Logger = loguru.logger,
     ) -> None:
+        """
+        Initializes the LedParser instance.
+
+        Args:
+            *log_file_paths: Variable length argument list of log file paths.
+            led_search_pattern: Regular expression pattern to identify LED data.
+            led_identifier: String identifier used to recognize LED related messages.
+            logger: Logger instance to be used for logging.
+
+        """
         self._log_file_paths: tuple[Path, ...] = tuple(Path(path) for path in log_file_paths)
         self._log_search_pattern: re.Pattern[str] = led_search_pattern
         self._led_identifier: str = led_identifier
@@ -42,6 +52,13 @@ class LedParser:
 
     @property
     def patterns(self) -> ParsedPatterns:
+        """
+        Gets the parsed patterns.
+
+        Returns:
+            A dictionary containing parsed patterns.
+
+        """
         return self._parsed_patterns
 
     async def _create_temp_log_file(self, source_file: Path) -> tempfile.NamedTemporaryFile:

@@ -62,12 +62,23 @@ async def get_async_mongo_client(
 
 
 class MongoDbConnector:
+    """Connector for asynchronous MongoDB operations."""
+
     def __init__(
         self,
         db_name: str | None = None,
         mongo_client: AsyncMongoClient | None = None,
         logger: Logger = loguru.logger,
     ) -> None:
+        """
+        Initializes the MongoDbConnector instance.
+
+        Args:
+            db_name: The name of the database to connect to.
+            mongo_client: An optional AsyncMongoClient instance to use.
+            logger: Logger instance to be used for logging.
+
+        """
         self.client = mongo_client
         self.db_name = db_name
         self.db: AsyncDatabase | None = None
@@ -75,10 +86,24 @@ class MongoDbConnector:
         self.logger: Logger = logger
 
     async def __aenter__(self) -> Self:
+        """
+        Enters the asynchronous context manager.
+
+        Returns:
+            The initialized MongoDbConnector instance.
+
+        """
         await self.initialize()
         return self
 
     async def __aexit__(self, *args) -> None:
+        """
+        Exits the asynchronous context manager and closes the database connection.
+
+        Args:
+            *args: Exception details if any occurred during the context.
+
+        """
         await self.close()
 
     async def initialize(self) -> None:

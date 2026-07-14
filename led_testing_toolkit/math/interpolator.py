@@ -11,6 +11,15 @@ if TYPE_CHECKING:
 
 
 class Interpolator:
+    """
+    Class to interpolate signals to a standard format.
+
+    Attributes:
+        lower_bound (int): The lower bound for interpolated values.
+        upper_bound (int): The upper bound for interpolated values.
+
+    """
+
     DEFAULT_LOWER_BOUND: Final[int] = 0
     DEFAULT_UPPER_BOUND: Final[int] = 100
 
@@ -18,6 +27,14 @@ class Interpolator:
     SHAPE: Final[int] = 2
 
     def __init__(self, *, lower_bound: int = DEFAULT_LOWER_BOUND, upper_bound: int = DEFAULT_UPPER_BOUND) -> None:
+        """
+        Initializes the Interpolator.
+
+        Args:
+            lower_bound (int): The lowest allowed value for interpolation clipping. Defaults to 0.
+            upper_bound (int): The highest allowed value for interpolation clipping. Defaults to 100.
+
+        """
         self.lower_bound = lower_bound
         self.upper_bound = upper_bound
 
@@ -28,6 +45,21 @@ class Interpolator:
         num_points: int,
         x_max: float | None = None,
     ) -> tuple[ndarray, ndarray]:
+        """
+        Asynchronously interpolates a list of points.
+
+        Args:
+            coordinates (list[Point]): List of points to interpolate.
+            num_points (int): The number of points to interpolate to.
+            x_max (float | None): The maximum x value for interpolation. Defaults to None.
+
+        Returns:
+            tuple[ndarray, ndarray]: A tuple of relative x values and interpolated y values.
+
+        Raises:
+            ValueError: If `num_points` is less than `MIN_INTERPOLATION_POINTS`.
+
+        """
         if num_points < self.MIN_INTERPOLATION_POINTS:
             raise ValueError(f"Number of interpolation points must be at least {self.MIN_INTERPOLATION_POINTS}!")
 
@@ -39,6 +71,21 @@ class Interpolator:
         num_points: int,
         x_max: float | None = None,
     ) -> tuple[ndarray, ndarray]:
+        """
+        Synchronously interpolates a list of points.
+
+        Args:
+            coordinates (list[Point]): List of points to interpolate.
+            num_points (int): The number of points to interpolate to.
+            x_max (float | None): The maximum x value for interpolation. Defaults to None.
+
+        Returns:
+            tuple[ndarray, ndarray]: A tuple of relative x values and interpolated y values.
+
+        Raises:
+            ValueError: If coordinates array is not of expected shape (n, 2).
+
+        """
         if not coordinates:
             return np.array([]), np.array([])
 

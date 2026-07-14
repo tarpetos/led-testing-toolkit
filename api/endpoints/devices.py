@@ -17,11 +17,31 @@ router = APIRouter()
 
 @router.get("/devices/", response_model=GetDevicesResponse)
 async def get_devices() -> dict[str, Any]:
+    """
+    Retrieve all devices data.
+
+    Returns:
+        A dictionary containing device data.
+
+    """
     return await device_service.get_all_devices_data()
 
 
 @router.get("/devices/{device_name}/etalon/patterns", response_model=GetEtalonPatternsResponse)
 async def get_etalon_patterns(device_name: str) -> list[str]:
+    """
+    Get all etalon patterns for a specific device.
+
+    Args:
+        device_name: The name of the device.
+
+    Returns:
+        A list of etalon pattern names.
+
+    Raises:
+        HTTPException: If the device or its etalon collection is not found.
+
+    """
     devices = await device_service.get_all_devices_data()
     device_data = devices.get(device_name.upper())
     if not device_data or not device_data.get("etalon_collection"):
@@ -35,6 +55,20 @@ async def get_etalon_patterns(device_name: str) -> list[str]:
 
 @router.post("/devices/{device_name}/etalon/select")
 async def select_etalon(device_name: str, request: SelectEtalonRequest) -> MessageResponse:
+    """
+    Select and load an etalon pattern for a device.
+
+    Args:
+        device_name: The name of the device.
+        request: The select etalon request payload.
+
+    Returns:
+        A message response indicating successful loading.
+
+    Raises:
+        HTTPException: If the device or etalon collection is not found, or if an internal error occurs.
+
+    """
     try:
         devices = await device_service.get_all_devices_data()
         device_data = devices.get(device_name.upper())
@@ -56,11 +90,35 @@ async def select_etalon(device_name: str, request: SelectEtalonRequest) -> Messa
 
 @router.get("/measured/{collection_name}/records")
 async def get_measured_records(collection_name: str) -> list[str]:
+    """
+    Get all measured records for a specific collection.
+
+    Args:
+        collection_name: The name of the collection.
+
+    Returns:
+        A list of measured record names.
+
+    """
     return await device_service.get_measured_records(collection_name)
 
 
 @router.post("/devices/{device_name}/measured/select")
 async def select_measured(device_name: str, request: SelectMeasuredRequest) -> MessageResponse:  # noqa: ARG001
+    """
+    Select and load a measured pattern.
+
+    Args:
+        device_name: The name of the device.
+        request: The select measured request payload.
+
+    Returns:
+        A message response indicating successful loading.
+
+    Raises:
+        HTTPException: If an internal error occurs during loading.
+
+    """
     try:
         await player_service.load_measured_pattern(request.collection_name)
     except Exception as e:

@@ -94,8 +94,6 @@ class AppConfig(BaseModel):
             parts = list(map(int, v.split("-")))
             if not (1 <= len(parts) <= 2):
                 raise ValueError  # noqa: TRY301
-            if any(p < 0 for p in parts):
-                raise ValueError  # noqa: TRY301
         except (ValueError, AttributeError) as e:
             sys.exit(f"{e!s}")
         return v

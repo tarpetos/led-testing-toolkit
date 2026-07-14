@@ -32,6 +32,17 @@ class LedGenerator:
         logger: Logger,
         save_to_db_collection: str | None = None,
     ) -> None:
+        """
+        Initialize the LedGenerator.
+
+        Args:
+            config: Application configuration.
+            patterns: List of patterns.
+            simulator: The simulator to use.
+            logger: The logger instance.
+            save_to_db_collection: Optional DB collection.
+
+        """
         self.config = config
         self.patterns = patterns
         self.simulator = simulator
