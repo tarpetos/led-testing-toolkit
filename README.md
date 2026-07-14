@@ -106,9 +106,6 @@ API_HOST=0.0.0.0
 API_PORT=8080
 ```
 
-> [!WARNING]
-> Do not commit your `.env` file. It is already included in `.gitignore` to prevent credential leaks.
-
 ---
 
 ## 📖 Usage Guide
@@ -165,8 +162,6 @@ Execute the full test suite (including coverage reporting):
 ```bash
 uv run pytest -c tests/pytest.ini
 ```
-> [!TIP]
-> Since the codebase is heavily async, `pytest-anyio` is configured in `tests/conftest.py` to handle the event loops cleanly.
 
 ### Code Linting & Formatting
 The project uses `ruff` to enforce styling, specifically adhering to a 120-character line length.
