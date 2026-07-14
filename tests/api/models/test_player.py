@@ -22,7 +22,7 @@ def test_player_update():
     status = PlayerStatus(has_pattern=True, is_playing=False, current_time=1.5, total_duration=10.0)
     led_state = LedState(r=255, g=128, b=0)
     update = PlayerUpdate(status=status, leds={"led_1": led_state})
-    
+
     assert update.type == "player_update"
     assert update.status == status
     assert update.leds["led_1"] == led_state
