@@ -1,6 +1,6 @@
 [project]
 name = "led-testing-toolkit"
-version = "0.0.1"
+version = "1.0.0"
 description = ""
 readme = "README.md"
 authors = [{ name = "tarpetos", email = "hevlichtaras@gmail.com" }]
